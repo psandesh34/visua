@@ -1,0 +1,38 @@
+{
+  "tradebook": {
+      "_id": "618567e8c40a910b0a6400e9",
+      "symbols": [
+          {
+              "_id": "618567e7c40a910b0a6400de",
+              "symbol": "TCS",
+              "trades": [
+                  "75021847",
+                  "77499748"
+              ],
+              "averagePrice": 6328,
+              "totalQuantity": 2,
+              "__v": 0
+          },
+          {
+              "_id": "618567e7c40a910b0a6400df",
+              "symbol": "ITC",
+              "trades": [
+                  "27844066"
+              ],
+              "averagePrice": 218.1,
+              "totalQuantity": 5,
+              "__v": 0
+          },
+          {
+              "_id": "618567e7c40a910b0a6400e1",
+              "symbol": "AMARAJABAT",
+              "trades": [
+                  "4366801"
+              ],
+              "averagePrice": 898,
+              "totalQuantity": 1,
+              "__v": 0
+          }
+      ]
+  }
+}
