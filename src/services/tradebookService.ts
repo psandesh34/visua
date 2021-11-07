@@ -41,13 +41,15 @@ export async function importPortfolio(fileName: string, userId: string) {
         for (let i = 0; i < symbolArray.length; i++) {
           if (symbolArray[i].symbol === result.symbol) {
             symbolArray[i].trades.push(result.trade_id);
-            symbolArray[i].totalQuantity =
-              parseInt(symbolArray[i].totalQuantity) +
-              parseInt(result.quantity);
+            if (result.trade_type === "sell") {
+              result.quantity = '-' + result.quantity;
+              result.price = '-' + result.price;
+            }
+            let oldQuantity = parseInt(symbolArray[i].totalQuantity);
+            symbolArray[i].totalQuantity = parseInt(symbolArray[i].totalQuantity) + parseInt(result.quantity);
             symbolArray[i].averagePrice =
-              (parseFloat(symbolArray[i].averagePrice) +
-                parseFloat(result.price)) /
-              symbolArray[i].totalQuantity;
+              ((parseFloat(symbolArray[i].averagePrice) * oldQuantity + parseFloat(result.price) * parseInt(result.quantity)) /
+              symbolArray[i].totalQuantity).toFixed(2);
             symbolElementFound = true;
             break;
           }
@@ -60,8 +62,8 @@ export async function importPortfolio(fileName: string, userId: string) {
             trades: [result.trade_id],
             totalQuantity: result.quantity,
             averagePrice: result.price,
-            // lastUpdatedDate: today,
-            lastTradedPrice: undefined
+            marketCap: undefined,
+            firstPurchaseDate: result.trade_date,
           });
         }
         symbolSet.add(symbolObjectId);
@@ -75,25 +77,28 @@ export async function importPortfolio(fileName: string, userId: string) {
 }
 
 export async function getPortfolio(userId: string) {
-  let holdings = await SymbolCode.find({ userId }).select(
-    "symbol averagePrice totalQuantity previousClose lastUpdatedDate"
+  let holdings = await SymbolCode.find({ userId }).where('totalQuantity').gt(0).sort('firstPurchaseDate').select(
+    "symbol averagePrice totalQuantity previousClose firstPurchaseDate"
   );
   const symbols = holdings.map((symbol) => symbol.symbol + '.NS');
-  await yahooFinance.quote(
-    {
-      symbols,
-      modules: ["price"],
-    },
-    function (err: Error, quotes) {
-      if (err) {
-        console.log(err);
-      } else {
-        holdings.forEach((el) => {
-          el.lastTradedPrice = quotes[el.symbol + '.NS'].price.regularMarketPrice;
-        })
+  if (symbols.length > 0) {
+    await yahooFinance.quote(
+      {
+        symbols,
+        modules: ["price"],
+      },
+      function (err: Error, quotes) {
+        if (err) {
+          console.log(err);
+        } else {
+          holdings.forEach((el) => {
+            el.lastTradedPrice = quotes[el.symbol + '.NS'].price.regularMarketPrice;
+            el.marketCap = quotes[el.symbol + '.NS'].price.marketCap / 10000000;
+          })
+        }
       }
-    }
-  );
+    );
+  }
   return { userId, holdings };
 }
 
