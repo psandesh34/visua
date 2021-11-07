@@ -17,6 +17,12 @@ const SymbolSchema: Schema = new Schema({
   totalQuantity: {
     type: Number,
   },
+  lastUpdatedDate: {
+    type: Date,
+  },
+  lastTradedPrice: {
+    type: Number,
+  }
 });
 
 export const SymbolCode: Model<any> = model("Symbol", SymbolSchema);

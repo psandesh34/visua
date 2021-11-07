@@ -4,12 +4,14 @@ import { Tradebook } from "../models/tradebookModel";
 import { SymbolCode } from "../models/symbolModel";
 import fs from "fs";
 import mongoose from "mongoose";
+import yahooFinance from "yahoo-finance";
 
 export async function importPortfolio(fileName: string, userId: string) {
   const results = [];
   let tradeCreateResult: any;
   let symbolCreateResult: any;
   let tradebookCreateResult: any;
+  // const today = new Date();
   fs.createReadStream(`uploads/${fileName}`)
     .pipe(csv())
     .on("data", (data) => results.push(data))
@@ -58,6 +60,8 @@ export async function importPortfolio(fileName: string, userId: string) {
             trades: [result.trade_id],
             totalQuantity: result.quantity,
             averagePrice: result.price,
+            // lastUpdatedDate: today,
+            lastTradedPrice: undefined
           });
         }
         symbolSet.add(symbolObjectId);
@@ -71,8 +75,24 @@ export async function importPortfolio(fileName: string, userId: string) {
 }
 
 export async function getPortfolio(userId: string) {
-  const holdings = await SymbolCode.find({ userId }).select(
-    "symbol averagePrice totalQuantity"
+  let holdings = await SymbolCode.find({ userId }).select(
+    "symbol averagePrice totalQuantity previousClose lastUpdatedDate"
+  );
+  const symbols = holdings.map((symbol) => symbol.symbol + '.NS');
+  await yahooFinance.quote(
+    {
+      symbols,
+      modules: ["price"],
+    },
+    function (err: Error, quotes) {
+      if (err) {
+        console.log(err);
+      } else {
+        holdings.forEach((el) => {
+          el.lastTradedPrice = quotes[el.symbol + '.NS'].price.regularMarketPrice;
+        })
+      }
+    }
   );
   return { userId, holdings };
 }
