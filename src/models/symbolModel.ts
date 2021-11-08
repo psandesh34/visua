@@ -26,6 +26,15 @@ const SymbolSchema: Schema = new Schema({
   marketCap: {
     type: Number,
   },
+  sector: {
+    type: String,
+  },
+  industry: {
+    type: String,
+  },
+  marketCapSection: {
+    type: String
+  }
 });
 
 export const SymbolCode: Model<any> = model("Symbol", SymbolSchema);

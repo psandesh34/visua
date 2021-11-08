@@ -1,17 +1,79 @@
 {
     "TCS.NS": {
+        "summaryDetail": {
+            "maxAge": 1,
+            "priceHint": 2,
+            "previousClose": 3492.25,
+            "open": 3512.95,
+            "dayLow": 3505,
+            "dayHigh": 3513.25,
+            "regularMarketPreviousClose": 3492.25,
+            "regularMarketOpen": 3512.95,
+            "regularMarketDayLow": 3505,
+            "regularMarketDayHigh": 3513.25,
+            "dividendRate": 28,
+            "dividendYield": 0.008,
+            "exDividendDate": "2021-10-14T00:00:00.000Z",
+            "payoutRatio": 0.4062,
+            "fiveYearAvgDividendYield": 1.45,
+            "beta": 0.665932,
+            "trailingPE": 35.619366,
+            "forwardPE": 29.481976,
+            "volume": 328525,
+            "regularMarketVolume": 328525,
+            "averageVolume": 2808203,
+            "averageVolume10days": 2226700,
+            "averageDailyVolume10Day": 2226700,
+            "bid": 3508.65,
+            "ask": 0,
+            "bidSize": 0,
+            "askSize": 0,
+            "marketCap": 12978671845376,
+            "fiftyTwoWeekLow": 2607.05,
+            "fiftyTwoWeekHigh": 3989.9,
+            "priceToSalesTrailing12Months": 7.2914705,
+            "fiftyDayAverage": 3671.5647,
+            "twoHundredDayAverage": 3408.5073,
+            "trailingAnnualDividendRate": 35,
+            "trailingAnnualDividendYield": 0.010022192,
+            "currency": "INR",
+            "fromCurrency": null,
+            "toCurrency": null,
+            "lastMarket": null,
+            "algorithm": null,
+            "tradeable": false
+        },
         "price": {
-            "regularMarketPrice": 3508.65
-        }
-    },
-    "ITC.NS": {
-        "price": {
-            "regularMarketPrice": 226.55
-        }
-    },
-    "AMARAJABAT.NS": {
-        "price": {
-            "regularMarketPrice": 703
+            "maxAge": 1,
+            "regularMarketChangePercent": 0.0046960847,
+            "regularMarketChange": 16.399902,
+            "regularMarketTime": "2021-11-04T13:45:02.000Z",
+            "priceHint": 2,
+            "regularMarketPrice": 3508.65,
+            "regularMarketDayHigh": 3513.25,
+            "regularMarketDayLow": 3505,
+            "regularMarketVolume": 328525,
+            "averageDailyVolume10Day": 2226700,
+            "averageDailyVolume3Month": 2808203,
+            "regularMarketPreviousClose": 3492.25,
+            "regularMarketSource": "FREE_REALTIME",
+            "regularMarketOpen": 3512.95,
+            "exchange": "NSI",
+            "exchangeName": "NSE",
+            "exchangeDataDelayedBy": 15,
+            "marketState": "CLOSED",
+            "quoteType": "EQUITY",
+            "symbol": "TCS.NS",
+            "underlyingSymbol": null,
+            "shortName": "TATA CONSULTANCY S",
+            "longName": "Tata Consultancy Services Limited",
+            "currency": "INR",
+            "quoteSourceName": "Delayed Quote",
+            "currencySymbol": "₹",
+            "fromCurrency": null,
+            "toCurrency": null,
+            "lastMarket": null,
+            "marketCap": 12978671845376
         }
     }
 }

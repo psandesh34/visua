@@ -18,14 +18,15 @@ export async function getTradeBook(req: Request, res: Response) {
   // const data = await yahooStockPrices.getCurrentData(['IBULHSGFIN.NS', 'AEGISCHEM.NS']);
 
   //& This works for multiple symbols
+  let symbols = ['TCS.NS'];
   await yahooFinance.quote(
-    {
-      symbols: ["IBULHSGFIN.NS", "AEGISCHEM.NS"],
-      modules: ["price"],
-    },
+    { symbols },
     function (err: Error, quotes) {
-      console.log(`~ quotes`, quotes);
-      result = quotes;
+      if (err) {
+        console.log(err);
+      } else {
+        result = quotes;
+      }
     }
   );
 

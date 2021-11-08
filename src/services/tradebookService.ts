@@ -64,6 +64,9 @@ export async function importPortfolio(fileName: string, userId: string) {
             averagePrice: result.price,
             marketCap: undefined,
             firstPurchaseDate: result.trade_date,
+            sector: undefined,
+            industry: undefined,
+            marketCapSection: undefined
           });
         }
         symbolSet.add(symbolObjectId);
@@ -85,7 +88,7 @@ export async function getPortfolio(userId: string) {
     await yahooFinance.quote(
       {
         symbols,
-        modules: ["price"],
+        modules: ["price", "summaryProfile"],
       },
       function (err: Error, quotes) {
         if (err) {
@@ -94,6 +97,17 @@ export async function getPortfolio(userId: string) {
           holdings.forEach((el) => {
             el.lastTradedPrice = quotes[el.symbol + '.NS'].price.regularMarketPrice;
             el.marketCap = quotes[el.symbol + '.NS'].price.marketCap / 10000000;
+            el.sector = quotes[el.symbol + '.NS'].summaryProfile.sector;
+            el.industry = quotes[el.symbol + '.NS'].summaryProfile.industry;
+            if(el.marketCap < 5000) {
+              el.marketCapSection = 'Small cap';
+            }
+            else if(el.marketCap < 20000) {
+              el.marketCapSection = 'Mid cap';
+            }
+            else {
+              el.marketCapSection = 'Large cap';
+            }
           })
         }
       }
