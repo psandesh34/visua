@@ -1,7 +1,6 @@
 import express from "express";
 import routes from "./routes";
 import mongoose from "mongoose";
-import bodyParser from "body-parser";
 import cors from 'cors';
 
 const app = express();
@@ -10,7 +9,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.use(cors({
   origin: ['http://localhost:3000','http://localhost:4200']
-
 }));
 
 async function main() {
@@ -26,12 +24,9 @@ async function main() {
   }
 
   const port = 3000;
-
-
   app.listen(port, () => {
     return console.log(`server is listening on ${port}`);
   });
-
   routes(app);
 }
 

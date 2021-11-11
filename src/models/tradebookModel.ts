@@ -1,4 +1,4 @@
-import { model, Schema, Model, Types } from "mongoose";
+import { model, Schema, Model } from "mongoose";
 
 // export interface TradebookInterface extends Document {
 //   userId: string;

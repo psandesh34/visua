@@ -5,7 +5,7 @@ const upload = multer({dest: 'uploads/'});
 
 export default (router: express.Router) => {
   router.get("/tradebook", getTradeBook);
-  router.post('/tradebook/upload', upload.single('file'), postTradeBook);
   router.post('/trade', addTrade);
+  router.post('/tradebook/upload', upload.single('file'), postTradeBook);
   router.get('/portfolio/:userId', getPortfolio);
 };

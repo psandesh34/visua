@@ -6,12 +6,14 @@ import fs from "fs";
 import mongoose from "mongoose";
 import yahooFinance from "yahoo-finance";
 
+/*
+* import the tradebook from uploaded CSV. Sample tradebook can be found in the root directory(smallTradebook.csv)
+* @param {string} fileName - uploaded CSV file name
+* @param {string} userId - user id (Multiple users be implemented later)
+* @returns {message: string} - message to be displayed to the user
+*/
 export async function importPortfolio(fileName: string, userId: string) {
   const results = [];
-  let tradeCreateResult: any;
-  let symbolCreateResult: any;
-  let tradebookCreateResult: any;
-  // const today = new Date();
   fs.createReadStream(`uploads/${fileName}`)
     .pipe(csv())
     .on("data", (data) => results.push(data))
@@ -49,7 +51,7 @@ export async function importPortfolio(fileName: string, userId: string) {
             symbolArray[i].totalQuantity = parseInt(symbolArray[i].totalQuantity) + parseInt(result.quantity);
             symbolArray[i].averagePrice =
               ((parseFloat(symbolArray[i].averagePrice) * oldQuantity + parseFloat(result.price) * parseInt(result.quantity)) /
-              symbolArray[i].totalQuantity).toFixed(2);
+                symbolArray[i].totalQuantity).toFixed(2);
             symbolElementFound = true;
             break;
           }
@@ -72,19 +74,26 @@ export async function importPortfolio(fileName: string, userId: string) {
         symbolSet.add(symbolObjectId);
       });
       tradebookObject.symbols = [...symbolSet];
-      tradeCreateResult = await Trade.create(tradeArray);
-      symbolCreateResult = await SymbolCode.create(symbolArray);
-      tradebookCreateResult = await Tradebook.create(tradebookObject);
+      await Trade.create(tradeArray);
+      await SymbolCode.create(symbolArray);
+      await Tradebook.create(tradebookObject);
     });
-  return { tradeCreateResult, symbolCreateResult, tradebookCreateResult };
+  return { message: "Started tradebook import." };
 }
 
+/*
+* get the portfolio of the user
+* @param {string} userId - user id
+* @returns {user, holdings} - portfolio of the user
+*/
 export async function getPortfolio(userId: string) {
   let holdings = await SymbolCode.find({ userId }).where('totalQuantity').gt(0).sort('firstPurchaseDate').select(
     "symbol averagePrice totalQuantity previousClose firstPurchaseDate"
   );
+  // '.NS' refers to the symbol prefix for NSE in yahoo finance
   const symbols = holdings.map((symbol) => symbol.symbol + '.NS');
   if (symbols.length > 0) {
+    // get the stock data from yahoo finance
     await yahooFinance.quote(
       {
         symbols,
@@ -95,14 +104,16 @@ export async function getPortfolio(userId: string) {
           console.log(err);
         } else {
           holdings.forEach((el) => {
-            el.lastTradedPrice = quotes[el.symbol + '.NS'].price.regularMarketPrice;
-            el.marketCap = quotes[el.symbol + '.NS'].price.marketCap / 10000000;
-            el.sector = quotes[el.symbol + '.NS'].summaryProfile.sector;
-            el.industry = quotes[el.symbol + '.NS'].summaryProfile.industry;
-            if(el.marketCap < 5000) {
+            const yahooSymbol = el.symbol + '.NS';
+            el.lastTradedPrice = quotes[yahooSymbol].price.regularMarketPrice;
+            // Return the market cap of the stock in scale of 10M
+            el.marketCap = quotes[yahooSymbol].price.marketCap / 10000000;
+            el.sector = quotes[yahooSymbol].summaryProfile.sector;
+            el.industry = quotes[yahooSymbol].summaryProfile.industry;
+            if (el.marketCap < 5000) {
               el.marketCapSection = 'Small cap';
             }
-            else if(el.marketCap < 20000) {
+            else if (el.marketCap < 20000) {
               el.marketCapSection = 'Mid cap';
             }
             else {
@@ -116,6 +127,10 @@ export async function getPortfolio(userId: string) {
   return { userId, holdings };
 }
 
+/*
+* get the tradebook of the user
+* @param {string} userId - user id
+*/
 export async function getTradebook(userId: string) {
   const tradebook = await Tradebook.findOne({ userId }).populate({
     path: "symbols",
