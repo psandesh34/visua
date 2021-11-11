@@ -1,8 +1,6 @@
 # Visualizer
 ## Analyze your stock portfolio
 
-***
-
 Visualizer is the node.js backEnd application for [Visualizer-UI](https://github.com/psandesh34/visualizer-UI).
 
 ### Current features
