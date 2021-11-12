@@ -142,3 +142,16 @@ export async function getTradebook(userId: string) {
   });
   return { tradebook };
 }
+export async function deletePortfolio(userId: string) {
+  const Traderbooks = await Tradebook.findOne({ userId });
+  Traderbooks.symbols.map(async (each) => {
+    let eachSymbol = await SymbolCode.find({ _id: each }).lean();
+    if (eachSymbol[0] != undefined) {
+      let getTrades = eachSymbol[0].trades;
+      await Trade.deleteMany({ _id: getTrades });
+    }
+  });
+  await SymbolCode.deleteMany({ _id: Traderbooks.symbols });
+  await Tradebook.deleteOne({ userId: userId });
+  return { success: true };
+}

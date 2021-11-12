@@ -55,3 +55,9 @@ export async function getPortfolio(req: Request, res: Response) {
   const result = await tradebookService.getPortfolio(userId);
   res.send(result);
 }
+
+export async function deletePortfolio(req: Request, res: Response){
+  const userId = req.body.userId;
+  const result = await tradebookService.deletePortfolio(userId)
+  res.send(result);
+}
