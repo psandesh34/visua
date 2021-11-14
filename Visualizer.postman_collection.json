@@ -1,0 +1,67 @@
+{
+	"variables": [],
+	"info": {
+		"name": "Visualizer",
+		"_postman_id": "4a61da69-9164-263a-2e2b-31b10b4423fc",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "post csv",
+			"request": {
+				"url": "http://localhost:3000/tradebook/upload",
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "smallTradebook.csv"
+						},
+						{
+							"key": "userId",
+							"value": "myUserId",
+							"type": "text"
+						}
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "get Portfolio",
+			"request": {
+				"url": "http://localhost:3000/portfolio/myUserId",
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Delete portfolio",
+			"request": {
+				"url": "http://localhost:3000/portfolio/myUserId",
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}

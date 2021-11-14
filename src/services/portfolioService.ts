@@ -1,10 +1,10 @@
 import csv from "csv-parser";
-import { Order } from "../models/orderModel";
+import { Trade } from "../models/tradeModel";
 import { Portfolio } from "../models/portfolioModel";
 import fs from "fs";
 import yahooFinance from "yahoo-finance";
 import { Holding } from "../models/holdingModel";
-import * as orderService from "./orderService";
+import * as tradeService from "./tradeService";
 import * as holdingService from "./holdingService";
 
 /*
@@ -15,7 +15,7 @@ import * as holdingService from "./holdingService";
 */
 export async function importPortfolio(fileName: string, userId: string) {
   const results = [];
-  const ordersArray = [];
+  const tradesArray = [];
   const holdingsObject = {};
   const holdingsArray = [];
   fs.createReadStream(`uploads/${fileName}`)
@@ -24,14 +24,14 @@ export async function importPortfolio(fileName: string, userId: string) {
       data.quantity = +parseInt(data.quantity);
       data.price = +parseFloat(data.price).toFixed(2);
       results.push(data);
-      ordersArray.push({
-        _id: data.order_id,
+      tradesArray.push({
+        _id: data.trade_id,
         userId,
         symbol: data.symbol,
         exchange: data.exchange,
         segment: data.segment,
         series: data.series,
-        orderType: data.trade_type,
+        tradeType: data.trade_type,
         quantity: data.quantity,
         price: data.price
       });
@@ -67,7 +67,7 @@ export async function importPortfolio(fileName: string, userId: string) {
         holdingsArray.push(Object.assign({ symbol }, holdingsObject[symbol]));
       }
       //TODO: Implement mongoose transactions for following
-      await Order.insertMany(ordersArray);
+      await Trade.insertMany(tradesArray);
       const holdingsInsertResult = await Holding.insertMany(holdingsArray);
       let holdingIds = holdingsInsertResult.map(holding => holding.id);
       await Portfolio.create({
@@ -127,7 +127,7 @@ export async function getPortfolio(userId: string) {
 export async function deletePortfolio(userId: string) {
   // todo: implement mongoose transactions or pre-hooks
   const result = await Portfolio.findOne({ userId }).select('holdings').lean();
-  await orderService.deleteOrders(userId);
+  await tradeService.deleteTrades(userId);
   await holdingService.deleteHoldings(result.holdings);
   const deleteResult = await Portfolio.deleteOne({ userId }).lean();
   return { message: "Portfolio deleted successfully", result: deleteResult };
