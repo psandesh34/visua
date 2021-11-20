@@ -1,18 +1,33 @@
 import { model, Schema, Model, Document } from "mongoose";
 
-const TradeSchema: Schema = new Schema({
+const TradeSchema: Schema = new Schema<tradeInterface>({
   _id: String,
   userId: {
     type: String,
     ref: "User",
-    required: true,
+    required: [true, 'Why no userId?'],
+    index: true
   },
-  symbol: { type: String, required: true },
-  exchange: { type: String, required: true },
-  segment: { type: String, required: true },
-  tradeType: { type: String, required: true },
-  quantity: { type: Number, required: true },
-  price: { type: Number, required: true }
+  symbol: { type: String, required: [true, 'Why no symbol?'] },
+  exchange: { type: String, default: "NSE" },
+  segment: { type: String, default: "EQ" },
+  tradeType: { type: String, required: [true, 'Why no tradeType?'] },
+  quantity: { type: Number, required: [true, 'Why no quantity?'] },
+  price: { type: Number, required: [true, 'Why no price?'] },
+  tradeDate: { type: Date, required: [true, 'Why no date?'], index: true },
+  orderExecutionTime: { type: Date },
 });
 
-export const Trade: Model<any> = model("Trade", TradeSchema);
+export interface tradeInterface extends Document {
+  userId: string;
+  symbol: string;
+  exchange: string;
+  segment: string;
+  tradeType: string;
+  quantity: number;
+  price: number;
+  tradeDate: Date;
+  orderExecutionTime: Date;
+}
+
+export const Trade: Model<tradeInterface> = model("Trade", TradeSchema);

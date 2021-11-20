@@ -1,11 +1,11 @@
 import csv from "csv-parser";
-import { Trade } from "../models/tradeModel";
-import { Portfolio } from "../models/portfolioModel";
 import fs from "fs";
 import yahooFinance from "yahoo-finance";
-import { Holding } from "../models/holdingModel";
 import * as tradeService from "./tradeService";
 import * as holdingService from "./holdingService";
+import { Trade } from "../models/tradeModel";
+import { Portfolio } from "../models/portfolioModel";
+import { Holding } from "../models/holdingModel";
 
 /*
 * import the tradebook from uploaded CSV. Sample tradebook can be found in the root directory(smallTradebook.csv)
@@ -24,17 +24,19 @@ export async function importPortfolio(fileName: string, userId: string) {
       data.quantity = +parseInt(data.quantity);
       data.price = +parseFloat(data.price).toFixed(2);
       results.push(data);
-      tradesArray.push({
+      const trade = new Trade({
         _id: data.trade_id,
-        userId,
+        userId: userId,
         symbol: data.symbol,
         exchange: data.exchange,
         segment: data.segment,
-        series: data.series,
         tradeType: data.trade_type,
         quantity: data.quantity,
-        price: data.price
+        price: data.price,
+        tradeDate: data.trade_date,
+        orderExecutionTime: data.order_execution_time || data.trade_date,
       });
+      tradesArray.push(trade);
       if (data.trade_type === "sell") {
         data.quantity = -data.quantity;
       }
@@ -49,9 +51,9 @@ export async function importPortfolio(fileName: string, userId: string) {
               (data.quantity + holdingsObject[data.symbol].totalQuantity)).toFixed(2);
         }
         holdingsObject[data.symbol].totalQuantity += data.quantity;
-        // if totalQuantity==0, remove the symbol from holdingsObject
+        // if totalQuantity==0, make averagePrice 0
         if (holdingsObject[data.symbol].totalQuantity === 0) {
-          delete holdingsObject[data.symbol];
+          holdingsObject[data.symbol].averagePrice = 0;
         }
       }
       else {
@@ -84,8 +86,13 @@ export async function importPortfolio(fileName: string, userId: string) {
 * @returns {user, holdings} - portfolio of the user
 */
 export async function getPortfolio(userId: string) {
-  const portfolio = await Portfolio.findOne({ userId }).select('-__v').populate('holdings', '-__v').lean();
-  if (portfolio.holdings.length > 0) {
+  const portfolio = await Portfolio.findOne({ userId }).select('-__v').populate({
+    path: 'holdings',
+    select: '-__v',
+    match: { totalQuantity: { $gt: 0 } }
+  }).lean();
+  if(!portfolio) throw new Error('No portfolio found');
+  if (portfolio.holdings?.length > 0) {
     // '.NS' refers to the symbol prefix for NSE in yahoo finance
     const symbols = portfolio.holdings.map((symbol) => symbol.symbol + '.NS');
     if (symbols.length > 0) {

@@ -3,7 +3,11 @@ import { model, Schema, Model, Document } from "mongoose";
 const holdingSchema = new Schema({
     symbol: String,
     averagePrice: Number,
-    totalQuantity: Number,
+    totalQuantity: {
+        type: Number,
+        default: 0,
+        index: true
+    },
     firstPurchaseDate: Date
 });
 

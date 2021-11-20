@@ -6,6 +6,7 @@ const PortfolioSchema: Schema = new Schema({
     // Users to be stored in a separate collection later(after implementing login)
     // ref: "User",
     unique: true,
+    index: true,
   },
   holdings: [
     { type: Schema.Types.ObjectId, ref: 'Holding' }
