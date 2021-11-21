@@ -79,6 +79,7 @@ export async function importPortfolio(fileName: string, userId: string) {
       await Portfolio.create({
         userId,
         holdings: holdingIds,
+        uploads: [fileName],
       });
     });
   return { message: "Started tradebook import." };
@@ -90,17 +91,15 @@ export async function importPortfolio(fileName: string, userId: string) {
  * @returns {user, holdings} - portfolio of the user
  */
 export async function getPortfolio(userId: string) {
-  const portfolio = await Portfolio.findOne({ userId })
-    .select("-__v")
-    .populate({
-      path: "holdings",
-      select: "-__v",
-      match: { totalQuantity: { $gt: 0 } },
-    })
-    .lean();
-  if (!portfolio)
-    throw new ApiError("notFoundError", 404, "Portfolio not found");
-  if (portfolio.holdings?.length > 0) {
+  let portfolio = await Portfolio.findOne({ userId })
+  .select("-__v")
+  .populate({
+    path: "holdings",
+    select: "-__v",
+    match: { totalQuantity: { $gt: 0 } },
+  })
+  .lean();
+  if (portfolio && portfolio.holdings?.length > 0) {
     // '.NS' refers to the symbol prefix for NSE in yahoo finance
     // const symbols = portfolio.holdings.map((symbol) => symbol.symbol + '.NS');
     const symbols = [];
@@ -137,6 +136,13 @@ export async function getPortfolio(userId: string) {
         }
       );
     }
+  }
+  else {
+    //Return empty user object if no holdings
+    portfolio = {
+      userId,
+      holdings: [],
+    };
   }
   return portfolio;
 }
