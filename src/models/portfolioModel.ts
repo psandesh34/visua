@@ -11,6 +11,10 @@ const PortfolioSchema: Schema = new Schema({
   holdings: [
     { type: Schema.Types.ObjectId, ref: 'Holding' }
   ],
+  invested: {
+    String,
+    default: 0,
+  },
   // Uploaded files can be stored in the database later. For now, we just store the file name.
   uploads: [{ type: String }]
 });
