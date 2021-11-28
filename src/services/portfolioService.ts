@@ -58,6 +58,7 @@ export default class portfolioService {
 						).toFixed(2);
 					}
 					holdingsObject[data.symbol].totalQuantity += data.quantity;
+					holdingsObject[data.symbol].trades.push(trade._id);
 					// if totalQuantity==0, make averagePrice 0
 					if (holdingsObject[data.symbol].totalQuantity === 0) {
 						holdingsObject[data.symbol].averagePrice = 0;
@@ -68,6 +69,7 @@ export default class portfolioService {
 						firstPurchaseDate: data.order_execution_time,
 						totalQuantity: data.quantity,
 						averagePrice: data.price,
+						trades: [data.trade_id]
 					};
 				}
 			})
