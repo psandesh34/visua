@@ -4,7 +4,7 @@ import yahooFinance from 'yahoo-finance';
 import { Trade } from '../models/tradeModel';
 import { Portfolio } from '../models/portfolioModel';
 import { Holding } from '../models/holdingModel';
-import { NSE } from '../shared/symbols';
+import { NSE } from '../shared/constants';
 import { ApiError } from '../shared/services';
 import holdingService from './holdingService';
 import tradeService from './tradeService';
@@ -29,8 +29,9 @@ export default class portfolioService {
 				results.push(data);
 				if (data.symbol.slice(-3) === '-BE')
 					data.symbol = data.symbol.slice(0, -3);
-				if (data.exchange === 'BSE')
-					data.symbol = NSE[data.symbol] || data.symbol;
+				data.symbol = NSE[data.symbol] || data.symbol;
+				if (NSE[data.symbol] && NSE[data.symbol] != 'None')
+					data.symbol = NSE[data.symbol];
 				const trade = new Trade({
 					_id: data.trade_id,
 					userId: userId,
@@ -69,7 +70,7 @@ export default class portfolioService {
 						firstPurchaseDate: data.order_execution_time,
 						totalQuantity: data.quantity,
 						averagePrice: data.price,
-						trades: [data.trade_id]
+						trades: [data.trade_id],
 					};
 				}
 			})
@@ -88,30 +89,6 @@ export default class portfolioService {
 				});
 			});
 		return { message: 'Started tradebook import.' };
-	}
-
-	/*
-	 * get the portfolio of the user
-	 * @param {string} userId - user id
-	 * @returns {user, holdings} - portfolio of the user
-	 */
-	// not being used, use holdingsService.getHoldingsOverview instead
-	public static async getPortfolio(userId: string) {
-		let portfolio = await Portfolio.findOne({ userId })
-			.select('-__v')
-			.populate({
-				path: 'holdings',
-				select: '-__v',
-				match: { totalQuantity: { $gt: 0 } },
-			})
-			.lean();
-		if (!portfolio) {
-			portfolio = {
-				userId,
-				holdings: [],
-			};
-		}
-		return portfolio;
 	}
 
 	public static async deletePortfolio(userId: string) {
