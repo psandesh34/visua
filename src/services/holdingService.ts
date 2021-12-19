@@ -17,6 +17,16 @@ export default class HoldingService {
 	 * @returns {Holding[]} - array of holdings with LTP, totalInvestedAmount, totalQuantity, averagePrice for each symbol
 	 */
 	public static async getHoldings(userId: string) {
+		const chartData = {
+			marketCapSection: {},
+			industry: {},
+		};
+		const overview = {
+			investedAmount: 0,
+			currentValue: 0,
+			profitLoss: 0,
+			profitLossPercentage: 0,
+		};
 		const holdings = await Holding.aggregate([
 			{
 				$match: {
@@ -33,10 +43,6 @@ export default class HoldingService {
 			},
 			{ $sort: { investedAmount: -1 } },
 		]);
-		const chartData = {
-			marketCapSection: {},
-			industry: {},
-		};
 		if (holdings?.length > 0) {
 			const symbols = [];
 			for (let i = 0; i < holdings.length; i++) {
@@ -68,6 +74,18 @@ export default class HoldingService {
 									el.marketCapSection = 'Large cap';
 								}
 								el.industry = industryName[el.symbol];
+								el.currentValue = +(
+									el.totalQuantity * el.lastTradedPrice
+								).toFixed(2);
+								el.profitLoss = +(el.currentValue - el.investedAmount).toFixed(
+									2
+								);
+								el.profitLossPercentage = +(
+									((el.currentValue - el.investedAmount) / el.investedAmount) *
+									100
+								).toFixed(2);
+								overview.investedAmount += el.investedAmount;
+								overview.currentValue += el.currentValue;
 								if (
 									chartData.marketCapSection.hasOwnProperty(el.marketCapSection)
 								) {
@@ -105,7 +123,17 @@ export default class HoldingService {
 				);
 			}
 		}
-		return { holdings, chartData };
+		overview.currentValue = +overview.currentValue.toFixed(2);
+		overview.investedAmount = +overview.investedAmount.toFixed(2);
+		overview.profitLoss = +(
+			overview.currentValue - overview.investedAmount
+		).toFixed(2);
+		overview.profitLossPercentage = +(
+			((overview.currentValue - overview.investedAmount) /
+				overview.investedAmount) *
+			100
+		).toFixed(2) || 0;
+		return { holdings, chartData, overview };
 	}
 
 	/* Get overview of holdings by userId.
