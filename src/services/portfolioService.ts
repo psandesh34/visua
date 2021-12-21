@@ -8,6 +8,7 @@ import { NSE } from '../shared/constants';
 import { ApiError } from '../shared/services';
 import holdingService from './holdingService';
 import tradeService from './tradeService';
+import { getSymbol } from '../shared/helper';
 
 export default class portfolioService {
 	/*
@@ -17,21 +18,16 @@ export default class portfolioService {
 	 * @returns {message: string} - message to be displayed to the user
 	 */
 	public static async importPortfolio(fileName: string, userId: string) {
-		const results = [];
 		const tradesArray = [];
 		const holdingsObject = {};
 		const holdingsArray = [];
 		fs.createReadStream(`uploads/${fileName}`)
 			.pipe(csv())
-			.on('data', (data) => {
+			.on('data', async (data) => {
 				data.quantity = +parseInt(data.quantity);
 				data.price = +parseFloat(data.price).toFixed(2);
-				results.push(data);
-				if (data.symbol.slice(-3) === '-BE')
-					data.symbol = data.symbol.slice(0, -3);
-				data.symbol = NSE[data.symbol] || data.symbol;
-				if (NSE[data.symbol] && NSE[data.symbol] != 'None')
-					data.symbol = NSE[data.symbol];
+				// get the available (NSE/BSE)symbol, remove any suffixes
+				data.symbol = await getSymbol(data.symbol);
 				const trade = new Trade({
 					_id: data.trade_id,
 					userId: userId,
@@ -45,9 +41,6 @@ export default class portfolioService {
 					orderExecutionTime: data.order_execution_time || data.trade_date,
 				});
 				tradesArray.push(trade);
-				if (data.trade_type === 'sell') {
-					data.quantity = -data.quantity;
-				}
 				if (holdingsObject.hasOwnProperty(data.symbol)) {
 					// averagePrice can only change if the tradeType is a buy
 					if (data.trade_type === 'buy') {
@@ -57,6 +50,9 @@ export default class portfolioService {
 									holdingsObject[data.symbol].totalQuantity) /
 							(data.quantity + holdingsObject[data.symbol].totalQuantity)
 						).toFixed(2);
+					}
+					if (data.trade_type === 'sell') {
+						data.quantity = -data.quantity;
 					}
 					holdingsObject[data.symbol].totalQuantity += data.quantity;
 					holdingsObject[data.symbol].trades.push(trade._id);

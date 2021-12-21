@@ -20,19 +20,6 @@ export async function getHoldings(
 	}
 }
 
-export async function getHoldingsOverview(
-	req: Request,
-	res: Response,
-	next: NextFunction
-) {
-	try {
-		const result = await holdingService.getHoldingsOverview(req.params.userId);
-		res.send(result);
-	} catch (err) {
-		next(err);
-	}
-}
-
 export async function getChartData(
 	req: Request,
 	res: Response,

@@ -1,4 +1,3 @@
-import { AnyArray } from 'mongoose';
 import yahooFinance from 'yahoo-finance';
 import { Holding } from '../models/holdingModel';
 import { industryName, NSE } from '../shared/constants';
@@ -17,7 +16,7 @@ export default class HoldingService {
 	 * @returns {Holding[]} - array of holdings with LTP, totalInvestedAmount, totalQuantity, averagePrice for each symbol
 	 */
 	public static async getHoldings(userId: string) {
-		const chartData = {
+		let chartData = {
 			marketCapSection: {},
 			industry: {},
 		};
@@ -27,6 +26,7 @@ export default class HoldingService {
 			profitLoss: 0,
 			profitLossPercentage: 0,
 		};
+		// get holding along with current invested amount
 		const holdings = await Holding.aggregate([
 			{
 				$match: {
@@ -60,19 +60,15 @@ export default class HoldingService {
 						if (err) {
 							console.log(err);
 						} else {
-							holdings.forEach((el: any) => {
+							for (let el of holdings) {
 								const yahooSymbol = HoldingService.getYahooSymbol(el.symbol);
+								// Assign symbol-specific data to the holding
 								el.lastTradedPrice =
 									quotes[yahooSymbol].price.regularMarketPrice;
 								// Return the market cap of the stock in scale of 10M
 								let marketCap = quotes[yahooSymbol].price.marketCap / 10000000;
-								if (marketCap < 5000) {
-									el.marketCapSection = 'Small cap';
-								} else if (marketCap < 20000) {
-									el.marketCapSection = 'Mid cap';
-								} else {
-									el.marketCapSection = 'Large cap';
-								}
+								el.marketCapSection =
+									HoldingService.getMarketCapSection(marketCap);
 								el.industry = industryName[el.symbol];
 								el.currentValue = +(
 									el.totalQuantity * el.lastTradedPrice
@@ -81,43 +77,21 @@ export default class HoldingService {
 									2
 								);
 								el.profitLossPercentage = +(
-									((el.currentValue - el.investedAmount) / el.investedAmount) *
+									(el.profitLoss / el.investedAmount) *
 									100
 								).toFixed(2);
+								// Update the overview object
 								overview.investedAmount += el.investedAmount;
 								overview.currentValue += el.currentValue;
-								if (
-									chartData.marketCapSection.hasOwnProperty(el.marketCapSection)
-								) {
-									chartData.marketCapSection[
-										el.marketCapSection
-									].totalInvestedAmount += el.investedAmount;
-									chartData.marketCapSection[el.marketCapSection].data.push(
-										el.investedAmount
-									);
-									chartData.marketCapSection[el.marketCapSection].labels.push(
-										el.symbol
-									);
-								} else {
-									chartData.marketCapSection[el.marketCapSection] = {
-										totalInvestedAmount: el.investedAmount,
-										data: [el.investedAmount],
-										labels: [el.symbol],
-									};
-								}
-								if (chartData.industry.hasOwnProperty(el.industry)) {
-									chartData.industry[el.industry].totalInvestedAmount +=
-										el.investedAmount;
-									chartData.industry[el.industry].data.push(el.investedAmount);
-									chartData.industry[el.industry].labels.push(el.symbol);
-								} else {
-									chartData.industry[el.industry] = {
-										totalInvestedAmount: el.investedAmount,
-										data: [el.investedAmount],
-										labels: [el.symbol],
-									};
-								}
-							});
+								// Add the symbolInfo for the pie charts of marketCap and industry
+								chartData = HoldingService.addSymbolInfoToChartData(
+									chartData,
+									['marketCapSection', 'industry'],
+									[el.marketCapSection, el.industry],
+									el.symbol,
+									el.investedAmount
+								);
+							}
 						}
 					}
 				);
@@ -128,39 +102,13 @@ export default class HoldingService {
 		overview.profitLoss = +(
 			overview.currentValue - overview.investedAmount
 		).toFixed(2);
-		overview.profitLossPercentage = +(
-			((overview.currentValue - overview.investedAmount) /
-				overview.investedAmount) *
-			100
-		).toFixed(2) || 0;
+		overview.profitLossPercentage =
+			+(
+				((overview.currentValue - overview.investedAmount) /
+					overview.investedAmount) *
+				100
+			).toFixed(2) || 0;
 		return { holdings, chartData, overview };
-	}
-
-	/* Get overview of holdings by userId.
-	 * @param {string} userId - user id
-	 * @returns userId - user id & totalInvestedAmount
-	 */
-	public static async getHoldingsOverview(userId: string) {
-		const overview = await Holding.aggregate([
-			{
-				$match: {
-					userId,
-					totalQuantity: { $gt: 0 },
-				},
-			},
-			{
-				$group: {
-					_id: { userId },
-					totalInvestedAmount: {
-						$sum: {
-							$multiply: ['$averagePrice', '$totalQuantity'],
-						},
-					},
-				},
-			},
-		]);
-		//Will contain only one element because of the group by clause
-		return overview[0];
 	}
 
 	/* Get single symbol by holdingId and userId.
@@ -190,13 +138,7 @@ export default class HoldingService {
 					holding.lastTradedPrice = quotes.price.regularMarketPrice;
 					// Return the market cap of the stock in scale of 10M
 					let marketCap = quotes.price.marketCap / 10000000;
-					if (marketCap < 5000) {
-						holding.marketCapSection = 'Small cap';
-					} else if (marketCap < 20000) {
-						holding.marketCapSection = 'Mid cap';
-					} else {
-						holding.marketCapSection = 'Large cap';
-					}
+					holding.marketCapSection = HoldingService.getMarketCapSection(marketCap);
 					if (quotes.summaryProfile) {
 						holding.industry = industryName[symbol];
 					}
@@ -206,13 +148,48 @@ export default class HoldingService {
 		return { holding, data };
 	}
 
-	public static getYahooSymbol(symbol: string) {
+	private static getYahooSymbol(symbol: string) {
 		if (NSE[symbol] && NSE[symbol] === 'None') {
 			symbol = symbol + '.BO';
 		} else {
 			symbol = symbol + '.NS';
 		}
 		return symbol;
+	}
+
+	private static addSymbolInfoToChartData<T>(
+		chartData: T,
+		chartCategories: string[],
+		subsections: string[],
+		symbol: string,
+		investedAmount: number
+	) {
+		for (let i = 0; i < chartCategories.length; i++) {
+			//check if chartData object has the section in it, if not create one and add the info
+			if (chartData[chartCategories[i]].hasOwnProperty(subsections[i])) {
+				chartData[chartCategories[i]][subsections[i]].totalInvestedAmount +=
+					investedAmount;
+				chartData[chartCategories[i]][subsections[i]].data.push(investedAmount);
+				chartData[chartCategories[i]][subsections[i]].labels.push(symbol);
+			} else {
+				chartData[chartCategories[i]][subsections[i]] = {
+					totalInvestedAmount: investedAmount,
+					data: [investedAmount],
+					labels: [symbol],
+				};
+			}
+		}
+		return chartData;
+	}
+
+	private static getMarketCapSection(marketCap: number) {
+		if (marketCap < 5000) {
+			return 'Small cap';
+		} else if (marketCap < 20000) {
+			return 'Mid cap';
+		} else {
+			return 'Large cap';
+		}
 	}
 
 	public static async getChartData(userId: string) {
