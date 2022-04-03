@@ -11,7 +11,6 @@ export async function getHoldings(
         const symbol = req.query.symbol as string;
         let holdingDate: Date;
         holdingDate = req.query.holdingDate? new Date(req.query.holdingDate as string) : new Date();
-        holdingDate = new Date('2021-02-26');
         holdingDate.setUTCHours(0, 0, 0, 0);
         // get next day of the holdingDate
         holdingDate.setDate(holdingDate.getDate() + 1);

@@ -92,12 +92,12 @@ export default class portfolioService {
                             if (!holdingsObject[data.symbol].holdingsUpdates[i].isSellTrade) {
                                 if (
                                     holdingsObject[data.symbol].holdingsUpdates[i]
-                                        .remainingQuantity < quantityToSubtract
+                                        .remainingQuantity < (quantityToSubtract + alreadySubtractedQuantity)
                                 ) {
-                                    alreadySubtractedQuantity +=
+                                    quantityToSubtract = quantityToSubtract -
                                         holdingsObject[data.symbol].holdingsUpdates[i]
-                                            .remainingQuantity;
-                                    quantityToSubtract -=
+                                            .remainingQuantity + alreadySubtractedQuantity;
+                                    alreadySubtractedQuantity +=
                                         holdingsObject[data.symbol].holdingsUpdates[i]
                                             .remainingQuantity;
                                     subtractedQuantity =
