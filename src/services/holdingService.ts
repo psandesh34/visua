@@ -76,7 +76,6 @@ export default class HoldingService {
 			},
 			{ $sort: { investedAmount: -1 } },
 		]);
-		console.log(`HoldingService ~ getHoldings ~ holdings`, holdings);
 		// Helps to get any undetected bug where totalQuantity < 0
 		holdings = holdings.filter(function (obj) {
 			return obj.totalQuantity !== 0;

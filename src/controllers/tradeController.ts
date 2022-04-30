@@ -15,3 +15,13 @@ export async function getRunningSumOfInvestedAmount(
         next(err);
     }
 }
+
+export async function getSymbolTrades(req: Request, res: Response, next: NextFunction) {
+    try {
+        const symbol = req.query.symbol as string;
+        const result = await TradeService.getSymbolTrades(req.params.userId, symbol);
+        res.send(result);
+    } catch (err) {
+        next(err);
+    }
+}

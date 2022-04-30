@@ -1,6 +1,7 @@
 import * as express from 'express';
-import { getRunningSumOfInvestedAmount } from '../controllers/tradeController';
+import * as tradeController from '../controllers/tradeController';
 
 export default (router: express.Router) => {
-    router.get('/tradebook/investedAmount/:userId', getRunningSumOfInvestedAmount);
+    router.get('/tradebook/investedAmount/:userId', tradeController.getRunningSumOfInvestedAmount);
+    router.get('/trades/:userId', tradeController.getSymbolTrades);
 };
