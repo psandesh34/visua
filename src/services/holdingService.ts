@@ -248,4 +248,28 @@ export default class HoldingService {
 		]);
 		return result;
 	}
+
+	public static async getHistoricalData(symbol: string) {
+		const yahooSymbol = this.getYahooSymbol(symbol);
+		let data: any;
+		const today = new Date();
+        const before1y = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+		await yahooFinance.historical(
+			{
+				symbol: yahooSymbol,
+				to: today.toDateString(),
+				from: before1y.toDateString(),
+				period: 'w',
+			},
+			function (err: Error, quotes: any) {
+				if (err) {
+					console.log(err);
+				} else {
+					data = quotes;
+				}
+			}
+		);
+		console.log(data);
+		return data;
+	}
 }

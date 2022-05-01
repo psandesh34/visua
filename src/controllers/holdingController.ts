@@ -37,3 +37,17 @@ export async function getChartData(
         next(err);
     }
 }
+
+export async function getHistoricalData(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    try {
+        const symbol = req.query.symbol as string;
+        const result = await holdingService.getHistoricalData(symbol);
+        res.send(result);
+    } catch (err) {
+        next(err);
+    }
+}
