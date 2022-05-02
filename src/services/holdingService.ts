@@ -1,4 +1,4 @@
-import yahooFinance from 'yahoo-finance';
+import yahooFinance from 'yahoo-finance2';
 import { Holding } from '../models/holdingModel';
 import { industryName, NSE } from '../shared/constants';
 
@@ -74,64 +74,59 @@ export default class HoldingService {
 					},
 				},
 			},
-			{ $sort: { investedAmount: -1 } },
+			{ $sort: { symbol: 1 } },
 		]);
 		// Helps to get any undetected bug where totalQuantity < 0
 		holdings = holdings.filter(function (obj) {
 			return obj.totalQuantity !== 0;
 		});
 		if (holdings?.length > 0) {
-			const symbols = [];
+			const symbols: string[] = [];
 			for (let i = 0; i < holdings.length; i++) {
 				let symbol = this.getYahooSymbol(holdings[i].symbol);
 				symbols.push(symbol);
 			}
 			if (symbols.length > 0) {
 				// get the stock data from yahoo finance
-				await yahooFinance.quote(
-					{
-						symbols,
-						modules: ['price', 'summaryProfile'],
-					},
-					function (err: Error, quotes: any) {
-						if (err) {
-							console.log(err);
-						} else {
-							for (let el of holdings) {
-								const yahooSymbol = HoldingService.getYahooSymbol(el.symbol);
-								// Assign symbol-specific data to the holding
-								el.lastTradedPrice =
-									quotes[yahooSymbol].price.regularMarketPrice;
-								// Return the market cap of the stock in scale of 10M
-								let marketCap = quotes[yahooSymbol].price.marketCap / 10000000;
-								el.marketCapSection =
-									HoldingService.getMarketCapSection(marketCap);
-								el.industry = industryName[el.symbol];
-								el.currentValue = +(
-									el.totalQuantity * el.lastTradedPrice
-								).toFixed(2);
-								el.profitLoss = +(el.currentValue - el.investedAmount).toFixed(
-									2
-								);
-								el.profitLossPercentage = +(
-									(el.profitLoss / el.investedAmount) *
-									100
-								).toFixed(2);
-								// Update the overview object
-								overview.investedAmount += el.investedAmount;
-								overview.currentValue += el.currentValue;
-								// Add the symbolInfo for the pie charts of marketCap and industry
-								chartData = HoldingService.addSymbolInfoToChartData(
-									chartData,
-									['marketCapSection', 'industry'],
-									[el.marketCapSection, el.industry],
-									el.symbol,
-									el.investedAmount
-								);
-							}
-						}
+				const results = await yahooFinance.quote(symbols);
+				// function (err: Error, quotes: any) {
+				// 	if (err) {
+				// 		console.log(err);
+				// 	} else {
+				for (let i = 0; i<holdings.length; i++) {
+					const yahooSymbol = HoldingService.getYahooSymbol(holdings[i].symbol);
+					if (yahooSymbol !== results[i].symbol) {
+						console.log(
+							`${yahooSymbol} info missing from yahoo-fnance2 module`
+						);
 					}
-				);
+					// Assign symbol-specific data to the holding
+					holdings[i].lastTradedPrice = results[i].regularMarketPrice;
+					// Return the market cap of the stock in scale of 10M
+					let marketCap = results[i].marketCap / 10000000;
+					holdings[i].marketCapSection = HoldingService.getMarketCapSection(marketCap);
+					holdings[i].industry = industryName[holdings[i].symbol];
+					holdings[i].currentValue = +(holdings[i].totalQuantity * holdings[i].lastTradedPrice).toFixed(2);
+					holdings[i].profitLoss = +(holdings[i].currentValue - holdings[i].investedAmount).toFixed(2);
+					holdings[i].profitLossPercentage = +(
+						(holdings[i].profitLoss / holdings[i].investedAmount) *
+						100
+					).toFixed(2);
+					// Update the overview object
+					overview.investedAmount += holdings[i].investedAmount;
+					overview.currentValue += holdings[i].currentValue;
+					// Add the symbolInfo for the pie charts of marketCap and industry
+					chartData = HoldingService.addSymbolInfoToChartData(
+						chartData,
+						['marketCapSection', 'industry'],
+						[holdings[i].marketCapSection, holdings[i].industry],
+						holdings[i].symbol,
+						holdings[i].investedAmount
+					);
+				}
+				// 		}
+				// 	}
+				// );
 			}
 		}
 		overview.currentValue = +overview.currentValue.toFixed(2);
@@ -162,27 +157,25 @@ export default class HoldingService {
 		let data: any;
 		const yahooSymbol = this.getYahooSymbol(symbol);
 		// get the stock data from yahoo finance
-		await yahooFinance.quote(
-			{
-				symbol: yahooSymbol,
-				modules: ['summaryProfile', 'financialData', 'price', 'summaryDetail'],
-			},
-			function (err: Error, quotes: any) {
-				if (err) {
-					console.log(err);
-				} else {
-					data = quotes;
-					holding.lastTradedPrice = quotes.price.regularMarketPrice;
-					// Return the market cap of the stock in scale of 10M
-					let marketCap = quotes.price.marketCap / 10000000;
-					holding.marketCapSection =
-						HoldingService.getMarketCapSection(marketCap);
-					if (quotes.summaryProfile) {
-						holding.industry = industryName[symbol];
-					}
-				}
-			}
-		);
+		const result = await yahooFinance.quoteSummary(yahooSymbol, {
+            modules: ["price", "summaryProfile"]
+        });
+		// function (err: Error, quotes: any) {
+		// 	if (err) {
+		// 		console.log(err);
+		// 	} else {
+		data = result;
+		holding.lastTradedPrice = result.price.regularMarketPrice;
+		// Return the market cap of the stock in scale of 10M
+		let marketCap = result.price.marketCap / 10000000;
+		holding.marketCapSection = HoldingService.getMarketCapSection(marketCap);
+		if (result.summaryProfile) {
+			holding.industry = industryName[symbol];
+		}
+		// 		}
+		// 	}
+		// );
+        console.log(`HoldingService ~ getSymbolDetails ~ { holding, data }`, { holding, data });
 		return { holding, data };
 	}
 
@@ -253,23 +246,33 @@ export default class HoldingService {
 		const yahooSymbol = this.getYahooSymbol(symbol);
 		let data: any;
 		const today = new Date();
-        const before1y = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-		await yahooFinance.historical(
-			{
-				symbol: yahooSymbol,
-				to: today.toDateString(),
-				from: before1y.toDateString(),
-				period: 'w',
-			},
-			function (err: Error, quotes: any) {
-				if (err) {
-					console.log(err);
-				} else {
-					data = quotes;
-				}
-			}
+		const before1y = new Date(
+			today.getFullYear() - 1,
+			today.getMonth(),
+			today.getDate()
 		);
-		console.log(data);
-		return data;
+		const result = await yahooFinance.historical(yahooSymbol, {
+			period1: '2021-01-01',
+			period2: today,
+			interval: '1wk',
+		});
+		// function (err: Error, quotes: any) {
+		// if (err) {
+		// console.log(err);
+		// } else {
+		data = result;
+        console.log(`HoldingService ~ getHistoricalData ~ data`, data);
+		// }
+		// }
+		// );
+		const chartjsFormat = {
+			labels: [],
+			data: [],
+		};
+		for (let i = 1; i < result.length; i++) {
+			chartjsFormat.labels.push(result[i].date.toDateString());
+			chartjsFormat.data.push(data[i].open);
+		}
+		return chartjsFormat;
 	}
 }
