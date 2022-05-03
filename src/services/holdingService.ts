@@ -89,10 +89,6 @@ export default class HoldingService {
 			if (symbols.length > 0) {
 				// get the stock data from yahoo finance
 				const results = await yahooFinance.quote(symbols);
-				// function (err: Error, quotes: any) {
-				// 	if (err) {
-				// 		console.log(err);
-				// 	} else {
 				for (let i = 0; i<holdings.length; i++) {
 					const yahooSymbol = HoldingService.getYahooSymbol(holdings[i].symbol);
 					if (yahooSymbol !== results[i].symbol) {
@@ -160,10 +156,6 @@ export default class HoldingService {
 		const result = await yahooFinance.quoteSummary(yahooSymbol, {
             modules: ["price", "summaryProfile"]
         });
-		// function (err: Error, quotes: any) {
-		// 	if (err) {
-		// 		console.log(err);
-		// 	} else {
 		data = result;
 		holding.lastTradedPrice = result.price.regularMarketPrice;
 		// Return the market cap of the stock in scale of 10M
@@ -172,10 +164,6 @@ export default class HoldingService {
 		if (result.summaryProfile) {
 			holding.industry = industryName[symbol];
 		}
-		// 		}
-		// 	}
-		// );
-        console.log(`HoldingService ~ getSymbolDetails ~ { holding, data }`, { holding, data });
 		return { holding, data };
 	}
 
@@ -223,25 +211,6 @@ export default class HoldingService {
 		}
 	}
 
-	public static async getChartData(userId: string) {
-		const result = await Holding.aggregate([
-			{
-				$match: {
-					userId,
-					totalQuantity: { $gt: 0 },
-				},
-			},
-			{
-				$addFields: {
-					investedAmount: {
-						$multiply: ['$averagePrice', '$totalQuantity'],
-					},
-				},
-			},
-		]);
-		return result;
-	}
-
 	public static async getHistoricalData(symbol: string) {
 		const yahooSymbol = this.getYahooSymbol(symbol);
 		let data: any;
@@ -256,15 +225,7 @@ export default class HoldingService {
 			period2: today,
 			interval: '1wk',
 		});
-		// function (err: Error, quotes: any) {
-		// if (err) {
-		// console.log(err);
-		// } else {
 		data = result;
-        console.log(`HoldingService ~ getHistoricalData ~ data`, data);
-		// }
-		// }
-		// );
 		const chartjsFormat = {
 			labels: [],
 			data: [],

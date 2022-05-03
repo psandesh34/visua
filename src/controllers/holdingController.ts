@@ -25,19 +25,6 @@ export async function getHoldings(
     }
 }
 
-export async function getChartData(
-    req: Request,
-    res: Response,
-    next: NextFunction
-) {
-    try {
-        const result = await holdingService.getChartData(req.params.userId);
-        res.send(result);
-    } catch (err) {
-        next(err);
-    }
-}
-
 export async function getHistoricalData(
     req: Request,
     res: Response,
