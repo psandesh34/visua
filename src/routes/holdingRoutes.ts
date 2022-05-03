@@ -6,4 +6,5 @@ const upload = multer({ dest: 'uploads/' });
 export default (router: express.Router) => {
     router.get('/holdings/:userId', holdingController.getHoldings);
     router.get('/symbol/historical', holdingController.getHistoricalData);
+    router.get('/symbol/history/:userId', holdingController.getSymbolHistory);
 };

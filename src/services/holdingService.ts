@@ -89,7 +89,7 @@ export default class HoldingService {
 			if (symbols.length > 0) {
 				// get the stock data from yahoo finance
 				const results = await yahooFinance.quote(symbols);
-				for (let i = 0; i<holdings.length; i++) {
+				for (let i = 0; i < holdings.length; i++) {
 					const yahooSymbol = HoldingService.getYahooSymbol(holdings[i].symbol);
 					if (yahooSymbol !== results[i].symbol) {
 						console.log(
@@ -100,10 +100,15 @@ export default class HoldingService {
 					holdings[i].lastTradedPrice = results[i].regularMarketPrice;
 					// Return the market cap of the stock in scale of 10M
 					let marketCap = results[i].marketCap / 10000000;
-					holdings[i].marketCapSection = HoldingService.getMarketCapSection(marketCap);
+					holdings[i].marketCapSection =
+						HoldingService.getMarketCapSection(marketCap);
 					holdings[i].industry = industryName[holdings[i].symbol];
-					holdings[i].currentValue = +(holdings[i].totalQuantity * holdings[i].lastTradedPrice).toFixed(2);
-					holdings[i].profitLoss = +(holdings[i].currentValue - holdings[i].investedAmount).toFixed(2);
+					holdings[i].currentValue = +(
+						holdings[i].totalQuantity * holdings[i].lastTradedPrice
+					).toFixed(2);
+					holdings[i].profitLoss = +(
+						holdings[i].currentValue - holdings[i].investedAmount
+					).toFixed(2);
 					holdings[i].profitLossPercentage = +(
 						(holdings[i].profitLoss / holdings[i].investedAmount) *
 						100
@@ -146,25 +151,31 @@ export default class HoldingService {
 	 * @throws {Error} - if holdingId or userId is not found
 	 */
 	public static async getSymbolDetails(userId: string, symbol: string) {
-		let holding: any = await Holding.findOne({ symbol, userId }).lean();
-		if (!holding) {
-			holding = {};
-		}
-		let data: any;
+		let holdingDataPromise = Holding.findOne({ symbol, userId }).lean();
+
+        let holdingData: any;
+        let symbolSummary: any;
 		const yahooSymbol = this.getYahooSymbol(symbol);
 		// get the stock data from yahoo finance
-		const result = await yahooFinance.quoteSummary(yahooSymbol, {
-            modules: ["price", "summaryProfile"]
+		const symbolSummaryPromise = yahooFinance.quoteSummary(yahooSymbol, {
+            modules: ['price', 'summaryProfile'],
+		});
+        await Promise.all([holdingDataPromise, symbolSummaryPromise]).then((values) => {
+            holdingData = values[0];
+            symbolSummary = values[1];
+            if (!holdingData) {
+                holdingData = {};
+            }
+            let data: any;
+            holdingData.lastTradedPrice = symbolSummary.price.regularMarketPrice;
+            // Return the market cap of the stock in scale of 10M
+            let marketCap = symbolSummary.price.marketCap / 10000000;
+            holdingData.marketCapSection = HoldingService.getMarketCapSection(marketCap);
+            if (symbolSummary.summaryProfile) {
+                holdingData.industry = industryName[symbol];
+            }
         });
-		data = result;
-		holding.lastTradedPrice = result.price.regularMarketPrice;
-		// Return the market cap of the stock in scale of 10M
-		let marketCap = result.price.marketCap / 10000000;
-		holding.marketCapSection = HoldingService.getMarketCapSection(marketCap);
-		if (result.summaryProfile) {
-			holding.industry = industryName[symbol];
-		}
-		return { holding, data };
+        return { holdingData, symbolSummary };
 	}
 
 	private static getYahooSymbol(symbol: string) {
@@ -235,5 +246,21 @@ export default class HoldingService {
 			chartjsFormat.data.push(data[i].open);
 		}
 		return chartjsFormat;
+	}
+
+	// Return the past 1 year weekly stock price, and the details of the symbols from yahoo finance
+	public static async getSymbolHistory(userId: string, symbol: string) {
+		const symbolDataWithHoldingInfo = this.getSymbolDetails(userId, symbol);
+		const priceChartData = this.getHistoricalData(symbol);
+        let result: any;
+		await Promise.all([symbolDataWithHoldingInfo, priceChartData]).then(
+			(values: any) => {
+				const holding = values[0].holdingData;
+				const data = values[0].symbolSummary;
+				const chartjsFormat = values[1];
+				result =  { holding, data, previousYearPrices: chartjsFormat };
+			}
+		);
+        return result;
 	}
 }
