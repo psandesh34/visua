@@ -234,7 +234,7 @@ export default class HoldingService {
 		const result = await yahooFinance.historical(yahooSymbol, {
 			period1: '2021-01-01',
 			period2: today,
-			interval: '1wk',
+			interval: '1d',
 		});
 		data = result;
 		const chartjsFormat = {

@@ -63,7 +63,17 @@ export default class TradeService {
 
     // get all trades for the symbol and userId provided
     public static async getSymbolTrades(userId: string, symbol: string) {
-        const result = await Trade.find({ userId, symbol }, { _id: 0, __v: 0, orderExecutionTime: 0, symbol: 0, userId: 0, segment: 0 });
+        const result = await Trade.find(
+            { userId, symbol },
+            {
+                _id: 0,
+                __v: 0,
+                orderExecutionTime: 0,
+                symbol: 0,
+                userId: 0,
+                segment: 0,
+            }
+        );
         return result;
     }
 }
