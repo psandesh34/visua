@@ -35,7 +35,7 @@ export default class HoldingService {
 					holdingsUpdates: {
 						$elemMatch: {
 							date: { $lte: holdingDate },
-							totalQuantity: { $gt: 0 },
+							remainingQuantity: { $gt: 0 },
 						},
 					},
 				},
@@ -63,7 +63,7 @@ export default class HoldingService {
 						$arrayElemAt: ['$holdingUpdates.averagePrice', -1],
 					},
 					totalQuantity: {
-						$arrayElemAt: ['$holdingUpdates.totalQuantity', -1],
+						$arrayElemAt: ['$holdingUpdates.remainingQuantity', -1],
 					},
 				},
 			},
@@ -93,7 +93,7 @@ export default class HoldingService {
 					const yahooSymbol = HoldingService.getYahooSymbol(holdings[i].symbol);
 					if (yahooSymbol !== results[i].symbol) {
 						console.log(
-							`${yahooSymbol} info missing from yahoo-fnance2 module`
+							`${yahooSymbol} info missing from yahoo-finance2 module`
 						);
 					}
 					// Assign symbol-specific data to the holding

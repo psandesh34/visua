@@ -24,6 +24,8 @@ export default class portfolioService {
             for (const data of records) {
                 const tradeId = generateObjectId();
                 data.quantity = +parseInt(data.quantity);
+                // No need to execute further if quantity is 0
+                if (data.quantity < 0) continue;
                 data.price = +parseFloat(data.price).toFixed(2);
                 // get the available (NSE/BSE)symbol, remove any suffixes
                 data.symbol = await getSymbol(data.symbol);
@@ -50,24 +52,15 @@ export default class portfolioService {
                     const currentAverage =
                         holdingsObject[data.symbol].holdingsUpdates[updatesArrayLength - 1]
                             .averagePrice;
-                    // if totalQuantity==0, make averagePrice 0. See if this is required anywhere
-                    // holdingsObject[data.symbol].holdingsUpdates.push({
-                    // 	date: data.trade_date,
-                    // 	averagePrice: data.price,
-                    // 	quantity: data.quantity,
-                    // });
 
-                    // if (currentQuantity === 0) {
-                    // 	holdingsObject[data.symbol].averagePrice = 0;
-                    // } else {
                     if (data.trade_type === 'buy') {
                         const newAverage =
                             (currentAverage * currentQuantity + data.price * data.quantity) /
                             (currentQuantity + data.quantity);
-                        // holdingsObject[data.symbol].averagePrice = newAverage;
                         const newQuantity = currentQuantity + data.quantity;
                         holdingsObject[data.symbol].holdingsUpdates.push({
                             date: new Date(data.trade_date),
+                            buyPrice: data.price,
                             averagePrice: newAverage,
                             totalQuantity: newQuantity,
                             remainingQuantity: newQuantity,
@@ -79,89 +72,93 @@ export default class portfolioService {
                         let quantityToSubtract = data.quantity;
                         let subtractedQuantity = 0;
                         data.quantity = -data.quantity;
-                        let quantityAfterSelling = 0;
-                        let alreadySubtractedQuantity = 0;
+                        let subtractedInvestment = 0;
+                        const lastHoldingUpdate = holdingsObject[data.symbol].holdingsUpdates[holdingsObject[data.symbol].holdingsUpdates.length - 1];
+                        const originalRemainingQuantities: number[] = holdingsObject[data.symbol].holdingsUpdates
+                            .map(update => update.remainingQuantity);
+                        const originalAveragePrices: number[] = holdingsObject[data.symbol].holdingsUpdates
+                            .map(update => update.averagePrice);
+                        let lastBuyRemainingQty: number;
+                        let lastBuyAveragePrice: number;
+                        let isAllQuantitySold = false;
                         for (
                             let i = 0;
                             i < holdingsObject[data.symbol].holdingsUpdates.length;
                             i++
                         ) {
+                            const currentHoldingUpdate = holdingsObject[data.symbol].holdingsUpdates[i];
                             if (quantityToSubtract === 0) {
-                                break;
-                            }
-                            if (!holdingsObject[data.symbol].holdingsUpdates[i].isSellTrade) {
-                                if (
-                                    holdingsObject[data.symbol].holdingsUpdates[i]
-                                        .remainingQuantity < (quantityToSubtract + alreadySubtractedQuantity)
-                                ) {
-                                    quantityToSubtract = quantityToSubtract -
-                                        holdingsObject[data.symbol].holdingsUpdates[i]
-                                            .remainingQuantity + alreadySubtractedQuantity;
-                                    alreadySubtractedQuantity +=
-                                        holdingsObject[data.symbol].holdingsUpdates[i]
-                                            .remainingQuantity;
-                                    subtractedQuantity =
-                                        holdingsObject[data.symbol].holdingsUpdates[i]
-                                            .remainingQuantity;
-                                    holdingsObject[data.symbol].holdingsUpdates[
-                                        i
-                                    ].remainingQuantity = 0;
-                                } else {
-                                    holdingsObject[data.symbol].holdingsUpdates[
-                                        i
-                                    ].remainingQuantity =
-                                        holdingsObject[data.symbol].holdingsUpdates[i]
-                                            .remainingQuantity -
-                                        quantityToSubtract -
-                                        alreadySubtractedQuantity;
-                                    quantityAfterSelling =
-                                        holdingsObject[data.symbol].holdingsUpdates[i]
-                                            .remainingQuantity;
-                                    subtractedQuantity =
-                                        quantityToSubtract + alreadySubtractedQuantity;
+                                // We only want to execute below code one time once everything is sold.
+                                if(!isAllQuantitySold) {
+                                    // Update the averagePrice only if this not the last holding update(there are more buy trades after this)
+                                    if (
+                                        i + 1 < holdingsObject[data.symbol].holdingsUpdates.length &&
+                                        !currentHoldingUpdate.isSellTrade
+                                    ) {
+                                        newAverage =
+                                        Math.abs(
+                                            (lastBuyAveragePrice * lastBuyRemainingQty) - subtractedInvestment) /
+                                            (originalRemainingQuantities[originalRemainingQuantities.length - 1] - subtractedQuantity);
+                                    }
+                                    isAllQuantitySold = true
+                                }
+                            } else if (!currentHoldingUpdate.isSellTrade) {
+                                const CurrentRemainingQuantity = currentHoldingUpdate.remainingQuantity;
+                                if (quantityToSubtract > CurrentRemainingQuantity) {
+                                    quantityToSubtract -= CurrentRemainingQuantity;
+                                    subtractedQuantity = CurrentRemainingQuantity;
+                                }
+                                else {
+                                    subtractedQuantity = quantityToSubtract;
                                     quantityToSubtract = 0;
+                                    // If this is the last element of holdingsUpdates, average will be the buying price the stock.
+                                    // If this is not the last element, it will be caught in first if condition of this for loop.
+                                    newAverage = currentHoldingUpdate.buyPrice;
+                                }
+                                subtractedInvestment += subtractedQuantity * currentHoldingUpdate.buyPrice;
+                            }
+
+                            for(let j = i; j < holdingsObject[data.symbol].holdingsUpdates.length; j++) {
+                                // Dont subtract again if everything has been sold.
+                                if(!isAllQuantitySold){
+                                    lastBuyAveragePrice = holdingsObject[data.symbol].holdingsUpdates[j].averagePrice;
+                                    lastBuyRemainingQty = holdingsObject[data.symbol].holdingsUpdates[j].remainingQuantity;
+                                    holdingsObject[data.symbol].holdingsUpdates[j].remainingQuantity -= subtractedQuantity;
                                 }
                             }
-                            // Check if holdingsUpdates has more but trades next. If this is the last trade, then averagePrice will not change
-                            if (i + 1 < holdingsObject[data.symbol].holdingsUpdates.length) {
-                                newAverage =
-                                    (currentAverage * currentQuantity -
-                                        holdingsObject[data.symbol].holdingsUpdates[i]
-                                            .averagePrice *
-                                            subtractedQuantity) /
-                                    (currentQuantity - subtractedQuantity);
-                            }
                         }
-                        // currentQuantity is becoming undefined for some reason, please check
-                        const newQuantity = quantityAfterSelling;
-                        // holdingsObject[data.symbol].averagePrice = newQuantity? newAverage: 0;
+                        const newQuantity = lastHoldingUpdate.remainingQuantity;
+
                         holdingsObject[data.symbol].holdingsUpdates.push({
                             date: new Date(data.trade_date),
-                            averagePrice: newQuantity ? newAverage : 0,
+                            averagePrice: newAverage,
                             totalQuantity: newQuantity,
+                            remainingQuantity: newQuantity,
                             isSellTrade: true,
                         });
                     }
 
-                    // holdingsObject[data.symbol].totalQuantity += data.quantity;
                     holdingsObject[data.symbol].trades.push(tradeId);
-                    // }
                 } else {
-                    holdingsObject[data.symbol] = {
-                        userId: userId,
-                        totalQuantity: data.quantity,
-                        averagePrice: data.price,
-                        trades: [tradeId],
-                        holdingsUpdates: [
-                            {
-                                date: data.trade_date,
-                                averagePrice: data.price,
-                                totalQuantity: data.quantity,
-                                remainingQuantity: data.quantity,
-                                isSellTrade: false,
-                            },
-                        ],
-                    };
+                    // First trade should always be a buy trade.
+                    if(data.trade_type === 'buy') {
+                        holdingsObject[data.symbol] = {
+                            userId: userId,
+                            totalQuantity: data.quantity,
+                            averagePrice: data.price,
+                            trades: [tradeId],
+                            holdingsUpdates: [
+                                {
+                                    date: data.trade_date,
+                                    buyPrice: data.price,
+                                    averagePrice: data.price,
+                                    totalQuantity: data.quantity,
+                                    remainingQuantity: data.quantity,
+                                    isSellTrade: false,
+                                },
+                            ],
+                        };
+                    }
                 }
             }
             setTimeout(() => {}, 5000);

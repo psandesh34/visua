@@ -31,6 +31,10 @@ const holdingUpdatesSchema = new Schema({
         required: true,
     },
     remainingQuantity: {
+        type: Number,
+        required: true
+    },
+    buyPrice: {
         type: Number
     }
 }, { _id: false });
