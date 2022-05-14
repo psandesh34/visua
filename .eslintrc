@@ -1,0 +1,20 @@
+{
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "ecmaVersion": 2022
+    },
+    "extends": ["airbnb-base"],
+    "rules": {
+        "indent": ["error", 4],
+        "quotes": ["error", "double"],
+        "import/extensions": ["error", "never"],
+        "max-len": ["error", { "code": 140 }]
+    },
+    "settings": {
+        "import/resolver": {
+            "node": {
+                "extensions": [".js", ".jsx", ".ts", ".tsx"]
+            }
+        }
+    }
+}

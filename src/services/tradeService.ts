@@ -1,8 +1,8 @@
-import { Trade } from '../models/tradeModel';
+import { Trade } from "../models/tradeModel";
 
 export default class TradeService {
     public static async deleteTrades(userId: string) {
-        //todo:  Add a check if userId exists once userId table is added.
+        // todo:  Add a check if userId exists once userId table is added.
         const result = await Trade.deleteMany({ userId });
         return result;
     }
@@ -13,38 +13,40 @@ export default class TradeService {
         return result;
     }
 
-    //get running sum of invested amount for a user by tradeDate
+    // get running sum of invested amount for a user by tradeDate
     public static async getRunningSumOfInvestedAmount(userId: string) {
-        //This works but 1. not taking sell trades in account, 2. this apprach will subtract the sellingPrice from totalInvestedAmount
+        // This works but 1. not taking sell trades in account, 2. this apprach will subtract the sellingPrice from totalInvestedAmount
         // instead of substracting the buyingPrice from totalInvestedAmount
         // To avoid this, we need to store the buying Price in the trade table when tradeType=='sell'
+        // eslint-disable-next-line no-console
+        console.log("userId: ", userId);
         const result = await Trade.aggregate([
             {
                 $group: {
-                    _id: { time: '$tradeDate' },
-                    value: { $sum: { $multiply: ['$price', '$quantity'] } },
+                    _id: { time: "$tradeDate" },
+                    value: { $sum: { $multiply: ["$price", "$quantity"] } },
                 },
             },
-            { $addFields: { _id: '$_id.time' } },
+            { $addFields: { _id: "$_id.time" } },
             { $sort: { _id: 1 } },
-            { $group: { _id: null, data: { $push: '$$ROOT' } } },
+            { $group: { _id: null, data: { $push: "$$ROOT" } } },
             {
                 $addFields: {
                     data: {
                         $reduce: {
-                            input: '$data',
+                            input: "$data",
                             initialValue: { total: 0, d: [] },
                             in: {
-                                total: { $sum: ['$$this.value', '$$value.total'] },
+                                total: { $sum: ["$$this.value", "$$value.total"] },
                                 d: {
                                     $concatArrays: [
-                                        '$$value.d',
+                                        "$$value.d",
                                         [
                                             {
-                                                _id: '$$this._id',
-                                                value: '$$this.value',
+                                                _id: "$$this._id",
+                                                value: "$$this.value",
                                                 runningTotal: {
-                                                    $sum: ['$$value.total', '$$this.value'],
+                                                    $sum: ["$$value.total", "$$this.value"],
                                                 },
                                             },
                                         ],
@@ -55,8 +57,8 @@ export default class TradeService {
                     },
                 },
             },
-            { $unwind: '$data.d' },
-            { $replaceRoot: { newRoot: '$data.d' } },
+            { $unwind: "$data.d" },
+            { $replaceRoot: { newRoot: "$data.d" } },
         ]);
         return result;
     }
@@ -72,7 +74,7 @@ export default class TradeService {
                 symbol: 0,
                 userId: 0,
                 segment: 0,
-            }
+            },
         );
         return result;
     }

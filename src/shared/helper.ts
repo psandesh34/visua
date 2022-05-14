@@ -1,11 +1,13 @@
-import { NSE } from './constants';
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
+import { NSE } from "./constants";
+
 export async function getSymbol(symbol: string) {
-  //Add more suffixes here
-    if (symbol.slice(-3) === '-BE') symbol = symbol.slice(0, -3);
-    symbol = NSE[symbol] || symbol;
-    if (NSE[symbol] && NSE[symbol] != 'None') symbol = NSE[symbol];
-    return symbol;
+    let nseSymbol = symbol;
+    // Add more suffixes here
+    if (symbol.slice(-3) === "-BE") nseSymbol = symbol.slice(0, -3);
+    nseSymbol = NSE[symbol] || symbol;
+    if (NSE[symbol] && NSE[symbol] != "None") nseSymbol = NSE[symbol];
+    return nseSymbol;
 }
 
 export function generateObjectId() {
