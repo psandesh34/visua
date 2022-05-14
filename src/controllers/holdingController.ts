@@ -8,9 +8,9 @@ export async function getHoldings(
 ) {
     try {
         // const symbol = req.query.symbol as string;
-			const holdingDate = req.query.holdingDate
-				? new Date(req.query.holdingDate as string)
-				: new Date();
+        const holdingDate = req.query.holdingDate
+            ? new Date(req.query.holdingDate as string)
+            : new Date();
         holdingDate.setUTCHours(0, 0, 0, 0);
         // get next day of the holdingDate
         holdingDate.setDate(holdingDate.getDate() + 1);

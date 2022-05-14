@@ -33,8 +33,7 @@ export default class portfolioService {
                 hobj.holdingsUpdates = value.holdingsUpdates;
                 holdingsArray.push(hobj);
             });
-            // for (const symbol in holdingsObject) {
-            // }
+
             // TODO: Implement mongoose transactions for following
             await Trade.insertMany(tradesArray);
             const holdingsInsertResult = await Holding.insertMany(

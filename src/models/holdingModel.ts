@@ -1,4 +1,6 @@
-import { model, Schema, Model, Document, SchemaDefinition } from 'mongoose';
+import {
+    model, Schema, Model, Document,
+} from "mongoose";
 
 export interface holdingInterface extends Document {
     userId: string;
@@ -32,11 +34,11 @@ const holdingUpdatesSchema = new Schema({
     },
     remainingQuantity: {
         type: Number,
-        required: true
+        required: true,
     },
     buyPrice: {
-        type: Number
-    }
+        type: Number,
+    },
 }, { _id: false });
 
 const holdingSchema = new Schema({
@@ -44,8 +46,8 @@ const holdingSchema = new Schema({
     userId: String,
     trades: [String],
     holdingsUpdates: [
-        holdingUpdatesSchema
-    ]
+        holdingUpdatesSchema,
+    ],
 });
 
-export const Holding: Model<any> = model('Holding', holdingSchema);
+export const Holding: Model<any> = model("Holding", holdingSchema);

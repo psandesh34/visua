@@ -1,3 +1,4 @@
+/* eslint-disable */
 // contains NSE alternatives for bse symbols, add any new ones here
 export enum NSE {
     "3IINFOTECH" = "3IINFOLTD",

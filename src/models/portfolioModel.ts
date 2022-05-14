@@ -1,4 +1,4 @@
-import { model, Schema, Model } from 'mongoose';
+import { model, Schema, Model } from "mongoose";
 
 const PortfolioSchema: Schema = new Schema({
     userId: {
@@ -8,7 +8,7 @@ const PortfolioSchema: Schema = new Schema({
         unique: true,
         index: true,
     },
-    holdings: [{ type: Schema.Types.ObjectId, ref: 'Holding' }],
+    holdings: [{ type: Schema.Types.ObjectId, ref: "Holding" }],
     invested: {
         String,
         default: 0,
@@ -17,4 +17,11 @@ const PortfolioSchema: Schema = new Schema({
     uploads: [{ type: String }],
 });
 
-export const Portfolio: Model<any> = model('Portfolio', PortfolioSchema);
+export interface portfolioInterface {
+    userId: string;
+    holdings: string[];
+    invested: number;
+    uploads: string[];
+}
+
+export const Portfolio: Model<any> = model("Portfolio", PortfolioSchema);
