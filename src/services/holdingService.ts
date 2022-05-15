@@ -1,6 +1,7 @@
 import yahooFinance from "yahoo-finance2";
 import { Holding } from "../models/holdingModel";
 import { IndustryName, NSE } from "../shared/constants";
+import ApiError from "../shared/services";
 
 export default class HoldingService {
     /* Delete holdings by userId.
@@ -35,7 +36,7 @@ export default class HoldingService {
                     holdingsUpdates: {
                         $elemMatch: {
                             date: { $lte: holdingDate },
-                            remainingQuantity: { $gt: 0 },
+                            totalQuantity: { $gt: 0 },
                         },
                     },
                 },
@@ -63,7 +64,7 @@ export default class HoldingService {
                         $arrayElemAt: ["$holdingUpdates.averagePrice", -1],
                     },
                     totalQuantity: {
-                        $arrayElemAt: ["$holdingUpdates.remainingQuantity", -1],
+                        $arrayElemAt: ["$holdingUpdates.totalQuantity", -1],
                     },
                 },
             },
@@ -87,56 +88,80 @@ export default class HoldingService {
             if (symbols.length > 0) {
                 // get the stock data from yahoo finance
                 const results = await yahooFinance.quote(symbols);
-                for (let i = 0; i < holdings.length; i += 1) {
-                    const yahooSymbol = HoldingService.getYahooSymbol(
-                        holdings[i].symbol,
-                    );
-                    if (yahooSymbol !== results[i].symbol) {
+                if (results.length !== symbols.length) {
+                    // eslint-disable-next-line no-console
+                    console.log("Some symbol is missing from the yahooFinance results.");
+                } else {
+                // Create promises to get the historical price of all symbols at given date, and then use Promise.All to resolve them.
+                    const historicalPricePromises = [];
+                    for (let i = 0; i < symbols.length; i += 1) {
+                        const nextDate = new Date(holdingDate);
+                        nextDate.setDate(nextDate.getDate() + 1);
+                        historicalPricePromises.push(yahooFinance.historical(symbols[i], {
+                            period1: holdingDate,
+                            period2: holdingDate.setDate(holdingDate.getDate() + 1),
+                            interval: "1d",
+                        }));
+                    }
+                    let historicalPrices = [];
+                    try {
+                        historicalPrices = await Promise.all(historicalPricePromises);
+                    } catch (error) {
+                        throw new ApiError("BadRequest", 400, error.message);
+                    }
+                    for (let i = 0; i < holdings.length; i += 1) {
+                        const yahooSymbol = HoldingService.getYahooSymbol(
+                            holdings[i].symbol,
+                        );
+                        if (yahooSymbol !== results[i].symbol) {
                         // eslint-disable-next-line no-console
-                        console.log(
-                            `${yahooSymbol} info missing from yahoo-finance2 module`,
+                            console.log(
+                                `${yahooSymbol} info missing from yahoo-finance2 module`,
+                            );
+                        }
+                        // Assign symbol-specific data to the holding
+                        // holdings[i].lastTradedPrice = results[i].regularMarketPrice;
+                        // Assign symbol price at given date to lastTradedPrice.
+                        holdings[i].lastTradedPrice = historicalPrices[i][0].close;
+                        // Return the market cap of the stock in scale of 10M
+                        const marketCap = results[i].marketCap / 10000000;
+                        holdings[i].marketCapSection = HoldingService.getMarketCapSection(marketCap);
+                        holdings[i].industry = IndustryName[holdings[i].symbol];
+                        holdings[i].currentValue = +(
+                            holdings[i].totalQuantity * holdings[i].lastTradedPrice
+                        ).toFixed(2);
+                        holdings[i].profitLoss = +(
+                            holdings[i].currentValue - holdings[i].investedAmount
+                        ).toFixed(2);
+                        holdings[i].profitLossPercentage = +(
+                            (holdings[i].profitLoss / holdings[i].investedAmount)
+                        * 100
+                        ).toFixed(2);
+                        // Update the overview object
+                        overview.investedAmount += holdings[i].investedAmount;
+                        overview.currentValue += holdings[i].currentValue;
+                        // Add the symbolInfo for the pie charts of marketCap and industry
+                        chartData = HoldingService.addSymbolInfoToChartData(
+                            chartData,
+                            ["marketCapSection", "industry"],
+                            [holdings[i].marketCapSection, holdings[i].industry],
+                            holdings[i].symbol,
+                            holdings[i].investedAmount,
                         );
                     }
-                    // Assign symbol-specific data to the holding
-                    holdings[i].lastTradedPrice = results[i].regularMarketPrice;
-                    // Return the market cap of the stock in scale of 10M
-                    const marketCap = results[i].marketCap / 10000000;
-                    holdings[i].marketCapSection = HoldingService.getMarketCapSection(marketCap);
-                    holdings[i].industry = IndustryName[holdings[i].symbol];
-                    holdings[i].currentValue = +(
-                        holdings[i].totalQuantity * holdings[i].lastTradedPrice
+                    overview.currentValue = +overview.currentValue.toFixed(2);
+                    overview.investedAmount = +overview.investedAmount.toFixed(2);
+                    overview.profitLoss = +(
+                        overview.currentValue - overview.investedAmount
                     ).toFixed(2);
-                    holdings[i].profitLoss = +(
-                        holdings[i].currentValue - holdings[i].investedAmount
-                    ).toFixed(2);
-                    holdings[i].profitLossPercentage = +(
-                        (holdings[i].profitLoss / holdings[i].investedAmount)
-                        * 100
-                    ).toFixed(2);
-                    // Update the overview object
-                    overview.investedAmount += holdings[i].investedAmount;
-                    overview.currentValue += holdings[i].currentValue;
-                    // Add the symbolInfo for the pie charts of marketCap and industry
-                    chartData = HoldingService.addSymbolInfoToChartData(
-                        chartData,
-                        ["marketCapSection", "industry"],
-                        [holdings[i].marketCapSection, holdings[i].industry],
-                        holdings[i].symbol,
-                        holdings[i].investedAmount,
-                    );
+                    overview.profitLossPercentage = +(
+                        ((overview.currentValue - overview.investedAmount)
+                                / overview.investedAmount)
+                            * 100
+                    ).toFixed(2) || 0;
                 }
             }
         }
-        overview.currentValue = +overview.currentValue.toFixed(2);
-        overview.investedAmount = +overview.investedAmount.toFixed(2);
-        overview.profitLoss = +(
-            overview.currentValue - overview.investedAmount
-        ).toFixed(2);
-        overview.profitLossPercentage = +(
-            ((overview.currentValue - overview.investedAmount)
-                    / overview.investedAmount)
-                * 100
-        ).toFixed(2) || 0;
         return { holdings, chartData, overview };
     }
 

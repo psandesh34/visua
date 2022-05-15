@@ -18,9 +18,7 @@ export default class portfolioService {
      */
     public static async importPortfolio(fileName: string, userId: string) {
         const parser = parse({ columns: true }, async (err, records) => {
-            // for (const data of records) {
             const holdingsArray = [];
-
             const { holdingsObject, tradesArray } = await this.generateHoldingObject(records, userId);
             Object.entries(holdingsObject).forEach(([symbol, value]) => {
                 const hobj = new Holding();
@@ -39,7 +37,9 @@ export default class portfolioService {
             const holdingsInsertResult = await Holding.insertMany(
                 holdingsArray,
             );
-            const holdingIds = holdingsInsertResult.map((holding) => holding.id);
+            const holdingIds = holdingsInsertResult.map(
+                (holding) => holding.id,
+            );
             await Portfolio.create({
                 userId,
                 holdings: holdingIds,
@@ -59,6 +59,7 @@ export default class portfolioService {
             tradeRecord.quantity = +parseInt(data.quantity, 10);
             // No need to execute further if quantity is 0
             if (data.quantity > 0) {
+                // Parse and convert to number
                 tradeRecord.price = +parseFloat(data.price).toFixed(2);
                 // get the available (NSE/BSE)symbol, remove any suffixes
                 tradeRecord.symbol = await getSymbol(data.symbol);
@@ -73,25 +74,23 @@ export default class portfolioService {
                     price: tradeRecord.price,
                     tradeDate: tradeRecord.trade_date,
                     orderExecutionTime:
-                    tradeRecord.order_execution_time || tradeRecord.trade_date,
+                        tradeRecord.order_execution_time
+                        || tradeRecord.trade_date,
                 });
                 tradesArray.push(trade);
                 if (holdingsObject[data.symbol]) {
                     // Get the array length here and use it to calculate averga price and total queantitiy
                     const updatesArrayLength: number = holdingsObject[data.symbol].holdingsUpdates.length;
-                    const currentQuantity = holdingsObject[data.symbol].holdingsUpdates[
+                    const lastHoldingUpdate = holdingsObject[data.symbol].holdingsUpdates[
                         updatesArrayLength - 1
-                    ].totalQuantity;
-                    const currentAverage = holdingsObject[data.symbol].holdingsUpdates[
-                        updatesArrayLength - 1
-                    ].averagePrice;
+                    ];
 
                     if (data.trade_type === "buy") {
                         // Add current buy in the average
-                        const newAverage = (currentAverage * currentQuantity
+                        const newAverage = (lastHoldingUpdate.averagePrice * lastHoldingUpdate.remainingQuantity
                                 + data.price * data.quantity)
-                            / (currentQuantity + data.quantity);
-                        const newQuantity = currentQuantity + data.quantity;
+                            / (lastHoldingUpdate.remainingQuantity + data.quantity);
+                        const newQuantity = lastHoldingUpdate.remainingQuantity + data.quantity;
                         holdingsObject[data.symbol].holdingsUpdates.push({
                             date: new Date(data.trade_date),
                             buyPrice: data.price,
@@ -103,15 +102,15 @@ export default class portfolioService {
                     } else {
                         // sell trade
                         let newAverage = 0;
+                        // Total quantity to be subtracted from the bought quantity.
                         let quantityToSubtract = data.quantity;
+                        // Already subtracted quantity. This will be updated in each increment.
                         let subtractedQuantity = 0;
+                        // These are used for calculating the average after all selling is completed.
                         let subtractedInvestment = 0;
-                        const lastHoldingUpdate = holdingsObject[data.symbol].holdingsUpdates[
-                            holdingsObject[data.symbol].holdingsUpdates
-                                .length - 1
-                        ];
                         let lastBuyRemainingQty: number;
                         let lastBuyAveragePrice: number;
+                        // A check used to calculate average only after all selling is completed.
                         let isAllQuantitySold = false;
                         for (
                             let i = 0;
@@ -125,10 +124,10 @@ export default class portfolioService {
                                 if (!isAllQuantitySold) {
                                     // Update the averagePrice only if this not the last holding update
                                     // (there are more buy trades after this)
-                                    if (
-                                        i + 1
-                                            < holdingsObject[data.symbol]
-                                                .holdingsUpdates.length
+                                    // This maintains the FIFO nature of selling the stocks.
+                                    if (i + 1
+                                        < holdingsObject[data.symbol]
+                                            .holdingsUpdates.length
                                         && !currentHoldingUpdate.isSellTrade
                                     ) {
                                         newAverage = Math.abs(
@@ -143,6 +142,7 @@ export default class portfolioService {
                                 }
                             } else if (!currentHoldingUpdate.isSellTrade) {
                                 const CurrentRemainingQuantity = currentHoldingUpdate.remainingQuantity;
+                                // Check if there is still more quantity to subtract.
                                 if (
                                     quantityToSubtract
                                     > CurrentRemainingQuantity
@@ -162,6 +162,7 @@ export default class portfolioService {
                                     * currentHoldingUpdate.buyPrice;
                             }
 
+                            // Reduce the remainingQuantity from all next trades after each selling iteration.
                             for (
                                 let j = i;
                                 j
@@ -171,17 +172,21 @@ export default class portfolioService {
                             ) {
                                 // Dont subtract again if everything has been sold.
                                 if (!isAllQuantitySold) {
+                                    // These will be updated on each iteration, and we'll get the correct value at the final iteration.
+                                    // (No need to add a special if condition to check if it is the last iteration)
                                     lastBuyAveragePrice = holdingsObject[data.symbol]
                                         .holdingsUpdates[j].averagePrice;
                                     lastBuyRemainingQty = holdingsObject[data.symbol]
                                         .holdingsUpdates[j]
                                         .remainingQuantity;
+                                    // Subtracting the remainingQuantity
                                     holdingsObject[data.symbol].holdingsUpdates[
                                         j
                                     ].remainingQuantity -= subtractedQuantity;
                                 }
                             }
                         }
+                        // This will be the new quantity after all subtraction is completed.
                         const newQuantity = lastHoldingUpdate.remainingQuantity;
 
                         holdingsObject[data.symbol].holdingsUpdates.push({
@@ -223,7 +228,9 @@ export default class portfolioService {
         const result = await Portfolio.findOne({ userId })
             .select("holdings")
             .lean();
-        if (!result) { throw new ApiError("notFoundError", 404, "Portfolio not found"); }
+        if (!result) {
+            throw new ApiError("notFoundError", 404, "Portfolio not found");
+        }
         await tradeService.deleteTrades(userId);
         await holdingService.deleteHoldings(result.holdings);
         const deleteResult = await Portfolio.deleteOne({ userId }).lean();
