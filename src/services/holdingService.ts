@@ -17,6 +17,7 @@ export default class HoldingService {
      * @returns {Holding[]} - array of holdings with LTP, totalInvestedAmount, totalQuantity, averagePrice for each symbol
      */
     public static async getHoldings(userId: string, holdingDate: Date) {
+        console.log("HoldingService ~ getHoldings ~ holdingDate", holdingDate);
         let chartData = {
             marketCapSection: {},
             industry: {},
@@ -92,20 +93,24 @@ export default class HoldingService {
                     // eslint-disable-next-line no-console
                     console.log("Some symbol is missing from the yahooFinance results.");
                 } else {
-                // Create promises to get the historical price of all symbols at given date, and then use Promise.All to resolve them.
+                    // Create promises to get the historical price of all symbols at given date, and then use Promise.All to resolve them.
                     const historicalPricePromises = [];
                     for (let i = 0; i < symbols.length; i += 1) {
                         const nextDate = new Date(holdingDate);
                         nextDate.setDate(nextDate.getDate() + 1);
                         historicalPricePromises.push(yahooFinance.historical(symbols[i], {
-                            period1: holdingDate,
-                            period2: holdingDate.setDate(holdingDate.getDate() + 1),
+                            // period1: holdingDate.setDate(holdingDate.getDate() - 5),
+                            // period2: holdingDate.setDate(holdingDate.getDate() + 5),
+                            period1: "2022-05-24",
+                            period2: "2022-05-29",
                             interval: "1d",
                         }));
+                        // console.log("HoldingService ~ getHoldings ~ holdingDate", holdingDate);
                     }
                     let historicalPrices = [];
                     try {
                         historicalPrices = await Promise.all(historicalPricePromises);
+                        console.log("HoldingService ~ getHoldings ~ historicalPrices", historicalPrices);
                     } catch (error) {
                         throw new ApiError("BadRequest", 400, error.message);
                     }
@@ -122,7 +127,7 @@ export default class HoldingService {
                         // Assign symbol-specific data to the holding
                         // holdings[i].lastTradedPrice = results[i].regularMarketPrice;
                         // Assign symbol price at given date to lastTradedPrice.
-                        holdings[i].lastTradedPrice = historicalPrices[i][0].close;
+                        holdings[i].lastTradedPrice = historicalPrices[i][historicalPrices[i].length - 1].close;
                         // Return the market cap of the stock in scale of 10M
                         const marketCap = results[i].marketCap / 10000000;
                         holdings[i].marketCapSection = HoldingService.getMarketCapSection(marketCap);
