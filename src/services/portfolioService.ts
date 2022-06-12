@@ -3,7 +3,7 @@ import { parse } from "csv-parse";
 import { Trade } from "../models/tradeModel";
 import { Portfolio } from "../models/portfolioModel";
 import { Holding } from "../models/holdingModel";
-import ApiError from "../shared/services";
+import { ApiError } from "../shared/services";
 import holdingService from "./holdingService";
 import tradeService from "./tradeService";
 import { generateObjectId, getSymbol } from "../shared/helper";
@@ -229,7 +229,7 @@ export default class portfolioService {
             .select("holdings")
             .lean();
         if (!result) {
-            throw new ApiError("notFoundError", 404, "Portfolio not found");
+            throw new ApiError(404, "Portfolio not found");
         }
         await tradeService.deleteTrades(userId);
         await holdingService.deleteHoldings(result.holdings);

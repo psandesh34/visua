@@ -18,8 +18,7 @@ export default class TradeService {
         // This works but 1. not taking sell trades in account, 2. this apprach will subtract the sellingPrice from totalInvestedAmount
         // instead of substracting the buyingPrice from totalInvestedAmount
         // To avoid this, we need to store the buying Price in the trade table when tradeType=='sell'
-        // eslint-disable-next-line no-console
-        console.log("userId: ", userId);
+        //! Use the userId later to identify the portfolio
         const result = await Trade.aggregate([
             {
                 $group: {

@@ -1,7 +1,7 @@
 import yahooFinance from "yahoo-finance2";
 import { Holding } from "../models/holdingModel";
 import { IndustryName, NSE } from "../shared/constants";
-import ApiError from "../shared/services";
+import { ApiError } from "../shared/services";
 
 export default class HoldingService {
     /* Delete holdings by userId.
@@ -90,7 +90,7 @@ export default class HoldingService {
                 const results = await yahooFinance.quote(symbols);
                 if (results.length !== symbols.length) {
                     // eslint-disable-next-line no-console
-                    console.log("Some symbol is missing from the yahooFinance results.");
+                    throw new ApiError(400, "Some symbol is missing from the yahooFinance results.");
                 } else {
                     // Create promises to get the historical price of all symbols at given date, and then use Promise.All to resolve them.
                     const historicalPricePromises = [];
@@ -105,7 +105,7 @@ export default class HoldingService {
                     try {
                         historicalPrices = await Promise.all(historicalPricePromises);
                     } catch (error) {
-                        throw new ApiError("BadRequest", 400, error.message);
+                        throw new ApiError(400, error.message);
                     }
                     for (let i = 0; i < holdings.length; i += 1) {
                         const yahooSymbol = HoldingService.getYahooSymbol(

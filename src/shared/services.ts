@@ -1,9 +1,9 @@
-export default class ApiError extends Error {
+export class ApiError {
     private statusCode: number;
 
-    constructor(name: string, statusCode: number, message?: string) {
-        super(message);
-        this.name = name;
+    private message: string;
+
+    constructor(statusCode: number, message: string) {
         this.statusCode = statusCode;
         this.message = message;
     }

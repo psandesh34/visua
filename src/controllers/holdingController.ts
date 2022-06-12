@@ -11,14 +11,12 @@ export async function getHoldings(
         const holdingDate = req.query.holdingDate
             ? new Date(req.query.holdingDate as string)
             : new Date();
-        // holdingDate = new Date("02/03/2021");
-        // holdingDate.setDate(holdingDate.getDate() + 1);
         holdingDate.setUTCHours(0, 0, 0, 0);
         // get next day of the holdingDate
         const result = await holdingService.getHoldings(req.params.userId, holdingDate);
         res.send(result);
     } catch (err) {
-        next(err);
+        res.status(err.statusCode || 500).send(err);
     }
 }
 
