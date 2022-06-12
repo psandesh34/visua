@@ -17,7 +17,6 @@ export default class HoldingService {
      * @returns {Holding[]} - array of holdings with LTP, totalInvestedAmount, totalQuantity, averagePrice for each symbol
      */
     public static async getHoldings(userId: string, holdingDate: Date) {
-        console.log("HoldingService ~ getHoldings ~ holdingDate", holdingDate);
         let chartData = {
             marketCapSection: {},
             industry: {},
@@ -96,21 +95,15 @@ export default class HoldingService {
                     // Create promises to get the historical price of all symbols at given date, and then use Promise.All to resolve them.
                     const historicalPricePromises = [];
                     for (let i = 0; i < symbols.length; i += 1) {
-                        const nextDate = new Date(holdingDate);
-                        nextDate.setDate(nextDate.getDate() + 1);
                         historicalPricePromises.push(yahooFinance.historical(symbols[i], {
-                            // period1: holdingDate.setDate(holdingDate.getDate() - 5),
-                            // period2: holdingDate.setDate(holdingDate.getDate() + 5),
-                            period1: "2022-05-24",
-                            period2: "2022-05-29",
+                            period1: new Date(holdingDate.setDate(holdingDate.getDate() - 5)),
+                            period2: new Date(holdingDate.setDate(holdingDate.getDate() + 5)),
                             interval: "1d",
                         }));
-                        // console.log("HoldingService ~ getHoldings ~ holdingDate", holdingDate);
                     }
                     let historicalPrices = [];
                     try {
                         historicalPrices = await Promise.all(historicalPricePromises);
-                        console.log("HoldingService ~ getHoldings ~ historicalPrices", historicalPrices);
                     } catch (error) {
                         throw new ApiError("BadRequest", 400, error.message);
                     }
